@@ -25,12 +25,16 @@ import           System.IO.Error
   (exprs,_) <- parseProlog2 (head as)
   print (getQueryClasses exprs)-}
 
+{-main = do
+  as <- getArgs
+  (exprs,_) <- parseProlog2 (head as)
+  print (map exprToClause exprs)-}
+
 main = do
   as <- getArgs
   (exprs,_) <- parseProlog2 (head as)
-  print (map exprToClause exprs)
-
-
+  let clauses = map exprToClause (filter (not . isQuery) exprs)
+  print (caseRule clauses ([(Term (Str "add" [Num (Left 0),Str "s" [Num (Left 0)]]),"",Nothing)],([],[])))
 
 parseProc filename = do { (exprs,_) <- parseProlog2 filename
    ; putStrLn "queries: "
