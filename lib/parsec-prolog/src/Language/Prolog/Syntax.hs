@@ -2,7 +2,7 @@
 module Language.Prolog.Syntax where
 
 
-data Expr = 
+data Expr =
      Var String                  -- variable
    | Str String [Expr]           -- structure
    | Op String [Expr]            -- operator

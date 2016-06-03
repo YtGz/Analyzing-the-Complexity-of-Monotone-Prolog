@@ -1,11 +1,16 @@
 module Main where
 
+import qualified Data.Map
+import Data.Rewriting.Substitution (Subst, GSubst)
+import qualified Data.Rewriting.Substitution.Type as Subst
+import           Data.Rewriting.Term.Type                (Term (..))
+import           ExprToTerm.Conversion
 import           Language.Prolog.Parser
 import           Language.Prolog.Syntax
 import           SymbolicEvaluationGraphs.InferenceRules
 import           System.Environment
 
-import           Data.List
+import qualified Data.List
 import           System.IO.Error
 
 --main = print (suc ([(Hole, "")],([AVar "T1", AVar "T2"],[])))
@@ -33,15 +38,17 @@ import           System.IO.Error
 main = do
   as <- getArgs
   (exprs,_) <- parseProlog2 (head as)
-  let clauses = map exprToClause (filter (not . isQuery) exprs)
-  print (caseRule clauses ([(Term (Str "add" [Num (Left 0),Str "s" [Num (Left 0)]]),"",Nothing)],([],[])))
+  let clauses = map termToClause (map exprToTerm (filter (not . isQuery) exprs))
+  print (caseRule clauses ([(Term (Fun "add" [Fun "0" [], Fun "s" [Fun "0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]) ,Nothing)],([],[])))
+
+
 
 parseProc filename = do { (exprs,_) <- parseProlog2 filename
    ; putStrLn "queries: "
    ; print exprs
    } `catchIOError` \e -> putStr ("FAILED " ++ filename ++ "\n");
 
-
+--TODO: store a list for all variables, construct identity function accordingly
 
 isQuery :: Expr -> Bool
 isQuery (Op ":-" [_]) = True
@@ -52,7 +59,7 @@ type FunctorName = String
 type QueryClass = (FunctorName, [ArgumentType])
 
 getQueryClasses :: [Expr] -> [QueryClass]
-getQueryClasses exprs = nub (map getQueryClass (filter isQuery exprs))
+getQueryClasses exprs = Data.List.nub (map getQueryClass (filter isQuery exprs))
 
 getQueryClass :: Expr -> QueryClass
 getQueryClass (Op _ [Str functor args]) =
@@ -61,5 +68,5 @@ getQueryClass (Op _ [Str functor args]) =
 getArgumentType :: Expr -> ArgumentType
 getArgumentType (Str _ _) = In
 getArgumentType (Num _) = In
-getArgumentType (Var _) = Out
+getArgumentType (Language.Prolog.Syntax.Var _) = Out
 getArgumentType _ = error "Malformed query argument"
