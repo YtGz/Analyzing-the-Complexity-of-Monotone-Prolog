@@ -1,12 +1,12 @@
 module Main where
 
 import qualified Data.Map
-import Data.Rewriting.Substitution (Subst, GSubst)
+import Data.Rewriting.Substitution (Subst, GSubst, unify)
 import qualified Data.Rewriting.Substitution.Type as Subst
 import           Data.Rewriting.Term.Type                (Term (..))
 import           ExprToTerm.Conversion
 import           Language.Prolog.Parser
-import           Language.Prolog.Syntax
+import qualified          Language.Prolog.Syntax
 import           SymbolicEvaluationGraphs.InferenceRules
 import           System.Environment
 
@@ -35,12 +35,14 @@ import           System.IO.Error
   (exprs,_) <- parseProlog2 (head as)
   print (map exprToClause exprs)-}
 
-main = do
+{- main = do
   as <- getArgs
   (exprs,_) <- parseProlog2 (head as)
   let clauses = map termToClause (map exprToTerm (filter (not . isQuery) exprs))
-  print (caseRule clauses ([(Term (Fun "add" [Fun "0" [], Fun "s" [Fun "0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]) ,Nothing)],([],[])))
+  print (caseRule clauses ([(Term (Fun "add" [Fun "0" [], Fun "s" [Fun "0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]) ,Nothing)],([],[])))-}
 
+
+main = print (unify' (Fun "star" [Var "T1", Var "T2"]) (Fun "star" [Var "XS", Fun "[]" []]))
 
 
 parseProc filename = do { (exprs,_) <- parseProlog2 filename
@@ -50,23 +52,23 @@ parseProc filename = do { (exprs,_) <- parseProlog2 filename
 
 --TODO: store a list for all variables, construct identity function accordingly
 
-isQuery :: Expr -> Bool
-isQuery (Op ":-" [_]) = True
+isQuery :: Language.Prolog.Syntax.Expr -> Bool
+isQuery (Language.Prolog.Syntax.Op ":-" [_]) = True
 isQuery _ = False
 
 data ArgumentType = In | Out deriving (Show, Eq)
 type FunctorName = String
 type QueryClass = (FunctorName, [ArgumentType])
 
-getQueryClasses :: [Expr] -> [QueryClass]
+getQueryClasses :: [Language.Prolog.Syntax.Expr] -> [QueryClass]
 getQueryClasses exprs = Data.List.nub (map getQueryClass (filter isQuery exprs))
 
-getQueryClass :: Expr -> QueryClass
-getQueryClass (Op _ [Str functor args]) =
+getQueryClass :: Language.Prolog.Syntax.Expr -> QueryClass
+getQueryClass (Language.Prolog.Syntax.Op _ [Language.Prolog.Syntax.Str functor args]) =
    (functor, map getArgumentType args)
 
-getArgumentType :: Expr -> ArgumentType
-getArgumentType (Str _ _) = In
-getArgumentType (Num _) = In
+getArgumentType :: Language.Prolog.Syntax.Expr -> ArgumentType
+getArgumentType (Language.Prolog.Syntax.Str _ _) = In
+getArgumentType (Language.Prolog.Syntax.Num _) = In
 getArgumentType (Language.Prolog.Syntax.Var _) = Out
 getArgumentType _ = error "Malformed query argument"
