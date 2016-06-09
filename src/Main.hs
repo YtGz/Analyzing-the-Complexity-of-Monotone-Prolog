@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types, UndecidableInstances #-}
 module Main where
 
 import qualified Data.Map
@@ -9,7 +10,10 @@ import           Language.Prolog.Parser
 import qualified          Language.Prolog.Syntax
 import           SymbolicEvaluationGraphs.InferenceRules
 import           System.Environment
-
+import Data.Default.Class
+import Data.Implicit
+import Data.Reflection hiding (D)
+import Data.Proxy
 import qualified Data.List
 import           System.IO.Error
 
@@ -35,15 +39,44 @@ import           System.IO.Error
   (exprs,_) <- parseProlog2 (head as)
   print (map exprToClause exprs)-}
 
-{- main = do
+{-main = do
   as <- getArgs
   (exprs,_) <- parseProlog2 (head as)
   let clauses = map termToClause (map exprToTerm (filter (not . isQuery) exprs))
   print (caseRule clauses ([(Term (Fun "add" [Fun "0" [], Fun "s" [Fun "0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]) ,Nothing)],([],[])))-}
 
+--main = print (unify' (Fun "star" [Var "T1", Var "T2"]) (Fun "star" [Var "XS", Fun "[]" []]))
 
-main = print (unify' (Fun "star" [Var "T1", Var "T2"]) (Fun "star" [Var "XS", Fun "[]" []]))
+ {-main = do
+  as <- getArgs
+  (exprs,_) <- parseProlog2 (head as)
+  let clauses = map termToClause (map exprToTerm (filter (not . isQuery) exprs))
+  print (eval clauses ([(Term (Fun "add" [Fun "0" [], Fun "s" [Fun "0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]) ,Nothing)],([],[])))-}
 
+main = print (withDefault 3 def)
+
+--make program clauses available to every function as implicit parameter
+
+-- values in our dynamically-constructed 'Default' over 'a'
+newtype D a s = D { runD :: a }
+
+-- a dictionary describing a 'Default'
+data Default_ a = Default_ { def_ :: a }
+
+instance Reifies s (Default_ a) => Default (D a s) where
+  def = a where a = D $ def_ (reflect a)
+
+
+withDefault :: a -> (forall s. Reifies s (Default_ a) => D a s) -> a
+withDefault d v = reify (Default_ d) (runD . asProxyOf v)
+
+asProxyOf :: f s -> Proxy s -> f s
+asProxyOf a _ = a
+
+instance Default [Clause] where def = []
+
+test :: Implicit_ [Clause] => [Clause]
+test = param_
 
 parseProc filename = do { (exprs,_) <- parseProlog2 filename
    ; putStrLn "queries: "

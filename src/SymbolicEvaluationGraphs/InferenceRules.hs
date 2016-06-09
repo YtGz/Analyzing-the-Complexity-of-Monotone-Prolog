@@ -22,8 +22,8 @@ suc _ = error "Cannot apply 'suc': Malformed AbstractState"
 caseRule :: [Clause] -> AbstractState -> AbstractState
 caseRule clauses ((Term t,sub,Nothing):s, kb) = ((let f clauseArray term substitution = if null clauseArray then [] else (Term term, substitution, head clauseArray) : f (tail clauseArray) term substitution in f) (map Just (slice clauses t)) t sub ++ s,kb)
 
-eval :: [Clause] -> AbstractState -> AbstractState
-eval clauses ((Term t,sub,Just (h,_)):s, (g,u)) = let mgu = unify t h in if isNothing mgu then (s, (g, u++[(t, h)])) else (s,(g,u))
+eval :: [Clause] -> AbstractState -> [AbstractState] --TODO: apply mgu also to KB
+eval clauses ((Term t,sub,Just (h,b)):s, (g,u)) = let (Just mgu) = unify' t h in [(map (\x -> (Term (apply mgu x),compose sub mgu,Nothing)) b ++ map (\(Term t',s',c') -> (Term (apply mgu t'),compose s' mgu,c')) s,(g,u)), (s, (g, u++[(t, h)]))]
 
 root :: Term' -> String
 root (Var s) = s
