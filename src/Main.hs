@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types, UndecidableInstances, ImplicitParams #-}
 module Main where
 
 import qualified Data.Map
@@ -53,7 +53,11 @@ import           System.IO.Error
   let clauses = map termToClause (map exprToTerm (filter (not . isQuery) exprs))
   print (eval clauses ([(Term (Fun "add" [Fun "0" [], Fun "s" [Fun "0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]) ,Nothing)],([],[])))-}
 
-main = print (withDefault 3 def)
+main = do
+  as <- getArgs
+  (exprs,_) <- parseProlog2 (head as)
+  let clauses = map (termToClause . exprToTerm) (filter (not . isQuery) exprs)
+  print (let ?clauses = withDefault clauses def in test)
 
 --make program clauses available to every function as implicit parameter
 
@@ -66,24 +70,21 @@ data Default_ a = Default_ { def_ :: a }
 instance Reifies s (Default_ a) => Default (D a s) where
   def = a where a = D $ def_ (reflect a)
 
-
 withDefault :: a -> (forall s. Reifies s (Default_ a) => D a s) -> a
 withDefault d v = reify (Default_ d) (runD . asProxyOf v)
 
 asProxyOf :: f s -> Proxy s -> f s
 asProxyOf a _ = a
 
-instance Default [Clause] where def = []
+--instance Default [Clause] where def = []
 
-test :: Implicit_ [Clause] => [Clause]
-test = param_
+test :: (?clauses::[Clause]) => [Clause]
+test = ?clauses
 
 parseProc filename = do { (exprs,_) <- parseProlog2 filename
    ; putStrLn "queries: "
    ; print exprs
    } `catchIOError` \e -> putStr ("FAILED " ++ filename ++ "\n");
-
---TODO: store a list for all variables, construct identity function accordingly
 
 isQuery :: Language.Prolog.Syntax.Expr -> Bool
 isQuery (Language.Prolog.Syntax.Op ":-" [_]) = True
