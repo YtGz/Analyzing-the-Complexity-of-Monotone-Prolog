@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types, UndecidableInstances, ImplicitParams #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types, UndecidableInstances #-}
 module Main where
 
 import qualified Data.Map
@@ -57,7 +57,9 @@ main = do
   as <- getArgs
   (exprs,_) <- parseProlog2 (head as)
   let clauses = map (termToClause . exprToTerm) (filter (not . isQuery) exprs)
-  print (let ?clauses = withDefault clauses def in test)
+  let h = give clauses param_ :: [Clause]
+  --print (let ?clauses = withDefault clauses def in test)
+  print (test clauses)
 
 --make program clauses available to every function as implicit parameter
 
@@ -78,8 +80,11 @@ asProxyOf a _ = a
 
 --instance Default [Clause] where def = []
 
-test :: (?clauses::[Clause]) => [Clause]
-test = ?clauses
+test :: Implicit_ [Clause] => [Clause] -> [Clause]
+test c = give c param_
+
+--test :: (?clauses::[Clause]) => [Clause]
+--test = ?clauses
 
 parseProc filename = do { (exprs,_) <- parseProlog2 filename
    ; putStrLn "queries: "
