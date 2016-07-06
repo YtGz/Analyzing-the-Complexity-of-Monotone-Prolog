@@ -2,18 +2,18 @@
 module Main where
 
 import qualified Data.Map
-import Data.Rewriting.Substitution (Subst, GSubst, unify)
+import           Data.Rewriting.Substitution (Subst, GSubst, unify)
 import qualified Data.Rewriting.Substitution.Type as Subst
 import           Data.Rewriting.Term.Type                (Term (..))
 import           ExprToTerm.Conversion
 import           Language.Prolog.Parser
-import qualified          Language.Prolog.Syntax
+import qualified Language.Prolog.Syntax
 import           SymbolicEvaluationGraphs.InferenceRules
 import           System.Environment
-import Data.Default.Class
-import Data.Implicit
-import Data.Reflection hiding (D)
-import Data.Proxy
+import           Data.Default.Class
+import           Data.Implicit
+import           Data.Reflection hiding (D)
+import           Data.Proxy
 import qualified Data.List
 import           System.IO.Error
 
@@ -53,13 +53,7 @@ import           System.IO.Error
   let clauses = map termToClause (map exprToTerm (filter (not . isQuery) exprs))
   print (eval clauses ([(Term (Fun "add" [Fun "0" [], Fun "s" [Fun "0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]) ,Nothing)],([],[])))-}
 
-main = do
-  as <- getArgs
-  (exprs,_) <- parseProlog2 (head as)
-  let clauses = map (termToClause . exprToTerm) (filter (not . isQuery) exprs)
-  let h = give clauses param_ :: [Clause]
-  --print (let ?clauses = withDefault clauses def in test)
-  print (test clauses)
+main = print test
 
 --make program clauses available to every function as implicit parameter
 
@@ -80,8 +74,8 @@ asProxyOf a _ = a
 
 --instance Default [Clause] where def = []
 
-test :: Implicit_ [Clause] => [Clause] -> [Clause]
-test c = give c param_
+test :: Implicit_ [Clause] => [Clause]
+test = param_
 
 --test :: (?clauses::[Clause]) => [Clause]
 --test = ?clauses

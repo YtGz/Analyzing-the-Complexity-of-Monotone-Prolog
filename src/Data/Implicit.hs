@@ -100,14 +100,18 @@ module Data.Implicit
     , param_
     , setParam_
     , ($~)
-    , (~.), f
+    , (~.),
     )
 where
 
 import           Data.Default.Class (Default, def)
-import           Data.Reflection
+import           System.IO.Unsafe (unsafePerformIO)
 import           Unsafe.Coerce (unsafeCoerce)
-
+import           SymbolicEvaluationGraphs.InferenceRules
+import           System.Environment
+import           Language.Prolog.Parser
+import           ExprToTerm.Conversion
+import qualified Language.Prolog.Syntax
 
 ------------------------------------------------------------------------------
 -- | The constraint @'Implicit' \"foo\" String@ on a function @f@ indicates
@@ -168,14 +172,21 @@ infixl 0 $$
 class Implicit_ a where
     -- | 'param_' retrieves the unnamed implicit parameter of type @a@ from
     -- the context @'Implicit_' a@.
-    param_ :: Given a => a
+    param_ :: a
 
 
-instance Implicit_ a where
-  param_ = given
+instance Implicit_ [Clause] where
+  param_ = unsafePerformIO readPrologFile
 
-f :: Given a => a
-f = given
+readPrologFile :: IO [Clause]
+readPrologFile = do
+  as <- getArgs
+  (exprs,_) <- parseProlog2 (head as)
+  return (map (termToClause . exprToTerm) (filter (not . isQuery) exprs))
+
+isQuery :: Language.Prolog.Syntax.Expr -> Bool
+isQuery (Language.Prolog.Syntax.Op ":-" [_]) = True
+isQuery _ = False
 
 ------------------------------------------------------------------------------
 {-instance Default a => Implicit_ a where
@@ -203,7 +214,7 @@ f $~ a = unsafeCoerce (Param_ f :: Param_ a b) a
 
 ------------------------------------------------------------------------------
 -- | Modify an unnamed implicit parameter.
-(~.) :: Given a => Implicit_ a => (Implicit_ b => c) -> (a -> b) -> c
+(~.) :: Implicit_ a => (Implicit_ b => c) -> (a -> b) -> c
 f ~. g = f $~ g param_
 infixl 8 ~.
 {-# INLINE (~.) #-}
