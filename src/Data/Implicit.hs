@@ -100,7 +100,7 @@ module Data.Implicit
     , param_
     , setParam_
     , ($~)
-    , (~.),
+    , (~.)
     )
 where
 
@@ -108,6 +108,7 @@ import           Data.Default.Class (Default, def)
 import           System.IO.Unsafe (unsafePerformIO)
 import           Unsafe.Coerce (unsafeCoerce)
 import           SymbolicEvaluationGraphs.InferenceRules
+import           Query.Utilities
 import           System.Environment
 import           Language.Prolog.Parser
 import           ExprToTerm.Conversion
@@ -175,7 +176,10 @@ class Implicit_ a where
     param_ :: a
 
 
+------------------------------------------------------------------------------
+--make program clauses available to every function as implicit parameter
 instance Implicit_ [Clause] where
+  {-# NOINLINE param_ #-} -- to ensure that I/O is done at most once
   param_ = unsafePerformIO readPrologFile
 
 readPrologFile :: IO [Clause]
@@ -184,13 +188,6 @@ readPrologFile = do
   (exprs,_) <- parseProlog2 (head as)
   return (map (termToClause . exprToTerm) (filter (not . isQuery) exprs))
 
-isQuery :: Language.Prolog.Syntax.Expr -> Bool
-isQuery (Language.Prolog.Syntax.Op ":-" [_]) = True
-isQuery _ = False
-
-------------------------------------------------------------------------------
-{-instance Default a => Implicit_ a where
-    param_ = def-}
 
 ------------------------------------------------------------------------------
 newtype Param_ a b = Param_ (Implicit_ a => b)
