@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types, UndecidableInstances #-}
 module Main where
 
-import           Data.Rewriting.Substitution (Subst, GSubst, unify)
+import           Data.Rewriting.Substitution (Subst, GSubst, unify, apply)
 import qualified Data.Rewriting.Substitution.Type as Subst
 import           Data.Rewriting.Term.Type                (Term (..))
 import           SymbolicEvaluationGraphs.InferenceRules
@@ -32,9 +32,11 @@ import           Data.Map
 
 -- main = print (caseRule test ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]), Nothing)],([],[])))
 
--- main = print (unify' (Fun "star" [Var "T1", Var "T2"]) (Fun "star" [Var "XS", Fun "[]" []]))
+main = let (Just mgu) = unify' (Fun "star" [Var "T1", Var "T2"]) (Fun "star" [Var "XS", Fun "[]" []]) in print (apply mgu (Fun "star" [Var "T1", Var "T2"]))
 
-main = print (eval test (caseRule test ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]), Nothing)],([],[]))))
+
+--main = print (unify' (Fun "add" [Var "X", Fun "s" [Var "Y"]]) (Fun "add" [Var "X", Fun "s" [Var "Y"]]))           -- replaces initial variables with initial (fresh) abstract variables
+--main = print (eval test (caseRule test ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]), Nothing)],([],[]))))
 
 -- main = print test
 
