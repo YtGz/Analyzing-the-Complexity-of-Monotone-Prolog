@@ -107,12 +107,11 @@ where
 import           Data.Default.Class (Default, def)
 import           System.IO.Unsafe (unsafePerformIO)
 import           Unsafe.Coerce (unsafeCoerce)
-import           SymbolicEvaluationGraphs.InferenceRules
 import           Query.Utilities
 import           System.Environment
 import           Language.Prolog.Parser
 import           ExprToTerm.Conversion
-import qualified Language.Prolog.Syntax
+import SymbolicEvaluationGraphs.Types
 
 ------------------------------------------------------------------------------
 -- | The constraint @'Implicit' \"foo\" String@ on a function @f@ indicates

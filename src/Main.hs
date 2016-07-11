@@ -4,9 +4,11 @@ module Main where
 import           Data.Rewriting.Substitution (Subst, GSubst, unify, apply)
 import qualified Data.Rewriting.Substitution.Type as Subst
 import           Data.Rewriting.Term.Type                (Term (..))
+import           SymbolicEvaluationGraphs.Types
 import           SymbolicEvaluationGraphs.InferenceRules
-import           Data.Implicit
+import           Data.Maybe
 import           Data.Map
+import           Data.Implicit
 
 --main = print (suc ([(Hole, "")],([AVar "T1", AVar "T2"],[])))
 
@@ -32,11 +34,12 @@ import           Data.Map
 
 -- main = print (caseRule test ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]), Nothing)],([],[])))
 
-main = let (Just mgu) = unify' (Fun "star" [Var "T1", Var "T2"]) (Fun "star" [Var "XS", Fun "[]" []]) in print (apply mgu (Fun "star" [Var "T1", Var "T2"]))
+-- main = print (apply (fromJust (unify' (Fun "star" [Var "T1", Var "T2"]) (Fun "star" [Var "XS", Fun "[]" []]))) (Fun "star" [Var "T1", Var "T2"]))
 
+main = print (apply (fromJust (unify' input input)) input)          -- replaces initial variables with initial (fresh) abstract variables
+       where input = Fun "add" [Var "X", Fun "s" [Var "Y"]]
 
---main = print (unify' (Fun "add" [Var "X", Fun "s" [Var "Y"]]) (Fun "add" [Var "X", Fun "s" [Var "Y"]]))           -- replaces initial variables with initial (fresh) abstract variables
---main = print (eval test (caseRule test ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList [("X", Data.Rewriting.Term.Type.Var "X")]), Nothing)],([],[]))))
+-- main = print (eval test (caseRule test ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList []), Nothing)],([],[]))))
 
 -- main = print test
 

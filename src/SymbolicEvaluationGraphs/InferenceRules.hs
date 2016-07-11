@@ -3,32 +3,14 @@ module SymbolicEvaluationGraphs.InferenceRules where
 import Data.Maybe
 import qualified Data.Map (elems, filter, filterWithKey)
 import Control.Arrow
+import Data.IORef
+import System.IO.Unsafe (unsafePerformIO)
 import Data.Rewriting.Substitution
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import qualified Data.Rewriting.Term
 import Data.Rewriting.Term.Type (Term(..))
 import ExprToTerm.Conversion
-
-type AbstractState = (State, KnowledgeBase)
-
-type KnowledgeBase = (G, U)
-
-type G = [AbstractVariable]
-
-data AbstractVariable =
-    AVar String
-    deriving (Eq,Show)
-
-type U = [(Term', Term')]
-
-type State = [(Goal, Subst', Maybe Clause)]
-
-data Goal
-    = Term Term'
-    | Hole
-    deriving ((((Show))))
-
-type Clause = (Term', [Term']) -- h :- B
+import SymbolicEvaluationGraphs.Types
 
 suc :: AbstractState -> AbstractState
 suc (state@((Hole,_,Nothing):_),kb) = (tail state, kb)
@@ -86,11 +68,6 @@ slice clauses t =
               root (fst x) == root t)
         clauses
 
-termToClause :: Term' -> Clause
-termToClause (Fun ":-" args) = (head args, tail args) -- rule
-termToClause h@(Fun _ _) = (h, []) -- fact (empty body)
-termToClause _ = error "Cannot apply 'exprToClause': Malformed Clause"
-
 -- unify, introducing fresh abstract variables
 unify'
     :: Term' -> Term' -> Maybe Subst'
@@ -100,8 +77,12 @@ unify' t1 t2 =
            (Fun "freshVariables" (vs ++ [t2]))
            (Fun "freshVariables" (map freshVariable vs ++ [t1])) -- note the argument order: use unify h t instead of unify t h to ensure mapping from variables (element V) to abstract variables (element A)
 
-freshVariable :: Term' -> Term'
-freshVariable (Var v) = Var (v ++ "'") -- TODO: find alternative way of renaming that is more readable (e.g. with static counter)
+counter :: IORef Int
+{-# NOINLINE counter #-}
+counter = unsafePerformIO (newIORef 0)
+
+freshVariable :: Term' -> Term' -- TODO: eliminate impurity introduced by using unsafePerformIO
+freshVariable _ = Var ("T" ++ show (unsafePerformIO (atomicModifyIORef counter (\x -> (x+1,x)))))
 
 restrictSubstToG :: Subst' -> G -> Subst'
 restrictSubstToG sub g =
