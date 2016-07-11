@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module SymbolicEvaluationGraphs.InferenceRules where
 
 import Data.Maybe
@@ -5,6 +6,7 @@ import qualified Data.Map (elems, filter, filterWithKey)
 import Control.Arrow
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
+import Data.Implicit
 import Data.Rewriting.Substitution
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import qualified Data.Rewriting.Term
@@ -16,23 +18,23 @@ suc :: AbstractState -> AbstractState
 suc (state@((Hole,_,Nothing):_),kb) = (tail state, kb)
 suc _ = error "Cannot apply 'suc': Malformed AbstractState"
 
-caseRule :: [Clause] -> AbstractState -> AbstractState
-caseRule clauses ((Term t,sub,Nothing):s,kb) =
+caseRule :: AbstractState -> AbstractState
+caseRule ((Term t,sub,Nothing):s,kb) =
     ( (let f clauseArray term substitution =
                if null clauseArray
                    then []
                    else (Term term, substitution, head clauseArray) :
                         f (tail clauseArray) term substitution
        in f)
-          (map Just (slice clauses t))
+          (map Just (slice t))
           t
           sub ++
       s
     , kb)
-caseRule _ _ = error "Cannot apply 'caseRule': Malformed AbstractState"
+caseRule _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 
-eval :: [Clause] -> AbstractState -> [AbstractState] --TODO: apply mgu also to KB
-eval clauses ((Term t,sub,Just (h,b)):s,(g,u)) =
+eval :: AbstractState -> [AbstractState] --TODO: apply mgu also to KB
+eval ((Term t,sub,Just (h,b)):s,(g,u)) =
     let (Just mgu) = unify' t h
         mguG = restrictSubstToG mgu g
     in [ ( map
@@ -55,18 +57,18 @@ eval clauses ((Term t,sub,Just (h,b)):s,(g,u)) =
                            (toMap mguG)))
            , map (apply mguG *** apply mguG) u))
        , (s, (g, u ++ [(t, h)]))]
-eval _ _ = error "Cannot apply 'eval': Malformed AbstractState"
+eval _ = error "Cannot apply 'eval': Malformed AbstractState"
 
 root :: Term' -> String
 root (Var s) = s
 root (Fun s _) = s
 
-slice :: [Clause] -> Term' -> [Clause]
-slice clauses t =
+slice :: Implicit_ [Clause] => Term' -> [Clause]
+slice t =
     filter
         (\x ->
               root (fst x) == root t)
-        clauses
+        param_
 
 -- unify, introducing fresh abstract variables
 unify'
