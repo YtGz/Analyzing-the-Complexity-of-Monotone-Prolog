@@ -15,7 +15,6 @@ import Data.Map (fromList)
 
 counter :: IORef Int
 {-# NOINLINE counter #-}
-
 counter = unsafePerformIO (newIORef 0)
 
 freshVariable :: Term' -> Term' -- TODO: eliminate impurity introduced by using unsafePerformIO

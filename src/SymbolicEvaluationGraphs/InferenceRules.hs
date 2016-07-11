@@ -56,6 +56,9 @@ eval ((Term t,sub,Just (h,b)):s,(g,u)) =
        , (s, (g, u ++ [(t, h)]))]
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
 
+backtrack :: AbstractState -> AbstractState
+backtrack (state@((_,_,Just _):_),kb) = (tail state, kb) 
+
 root :: Term' -> String
 root (Var s) = s
 root (Fun s _) = s
@@ -84,4 +87,6 @@ restrictSubstToG sub g =
         (Data.Map.filterWithKey
              (\k _ ->
                    elem (Var k) g)
-             (toMap sub))-- isSubstCompatibleToKB      G: AVars in G need to map to ground terms (or another AVar from G),   + U???
+             (toMap sub))
+
+-- isSubstCompatibleToKB      G: AVars in G need to map to ground terms (or another AVar from G),   + U???

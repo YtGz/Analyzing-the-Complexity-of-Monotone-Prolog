@@ -49,4 +49,4 @@ main = do
   (exprs,_) <- parseProlog2 (head as)
   print (getInitialAbstractState (head (getQueryClasses exprs)))
 
---main = print (show (freshVariable (Var "X")) ++ show (freshVariable (Var "Y")))
+-- main = print (show (freshVariable (Var "")) ++ show (freshVariable (Var ""))) -- the two fresh variables should be distinct

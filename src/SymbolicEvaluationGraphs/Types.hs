@@ -18,6 +18,6 @@ type State = [(Goal, Subst', Maybe Clause)]
 data Goal
     = Term Term'
     | Hole
-    deriving (((((Show)))))
+    deriving (Show)
 
 type Clause = (Term', [Term']) -- h :- B
