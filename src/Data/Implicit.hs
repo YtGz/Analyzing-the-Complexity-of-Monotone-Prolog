@@ -111,7 +111,8 @@ import           Query.Utilities
 import           System.Environment
 import           Language.Prolog.Parser
 import           ExprToTerm.Conversion
-import SymbolicEvaluationGraphs.Types
+import           SymbolicEvaluationGraphs.Types
+import           SymbolicEvaluationGraphs.Utilities
 
 ------------------------------------------------------------------------------
 -- | The constraint @'Implicit' \"foo\" String@ on a function @f@ indicates

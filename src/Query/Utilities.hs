@@ -1,6 +1,6 @@
 module Query.Utilities
   ( isQuery,
-    ArgumentType,
+    ArgumentType (In, Out),
     FunctorName,
     QueryClass,
     getQueryClass,

@@ -1,11 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
+
 module SymbolicEvaluationGraphs.InferenceRules where
 
 import Data.Maybe
 import qualified Data.Map (elems, filter, filterWithKey)
 import Control.Arrow
-import Data.IORef
-import System.IO.Unsafe (unsafePerformIO)
 import Data.Implicit
 import Data.Rewriting.Substitution
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
@@ -13,6 +12,7 @@ import qualified Data.Rewriting.Term
 import Data.Rewriting.Term.Type (Term(..))
 import ExprToTerm.Conversion
 import SymbolicEvaluationGraphs.Types
+import SymbolicEvaluationGraphs.Utilities
 
 suc :: AbstractState -> AbstractState
 suc (state@((Hole,_,Nothing):_),kb) = (tail state, kb)
@@ -45,16 +45,13 @@ eval ((Term t,sub,Just (h,b)):s,(g,u)) =
                (\(Term t',s',c') ->
                      (Term (apply mguG t'), compose s' mguG, c'))
                s  {-use new abstractVars-}
-         , ( map
-                 (\(Var v) ->
-                       AVar v)
-                 (Data.Map.elems
-                      (Data.Map.filter
-                           (\x ->
-                                 case x of
-                                     Var _ -> True
-                                     _ -> False)
-                           (toMap mguG)))
+         , ( Data.Map.elems
+                 (Data.Map.filter
+                      (\x ->
+                            case x of
+                                Var _ -> True
+                                _ -> False)
+                      (toMap mguG))
            , map (apply mguG *** apply mguG) u))
        , (s, (g, u ++ [(t, h)]))]
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
@@ -63,7 +60,9 @@ root :: Term' -> String
 root (Var s) = s
 root (Fun s _) = s
 
-slice :: Implicit_ [Clause] => Term' -> [Clause]
+slice
+    :: Implicit_ [Clause]
+    => Term' -> [Clause]
 slice t =
     filter
         (\x ->
@@ -79,19 +78,10 @@ unify' t1 t2 =
            (Fun "freshVariables" (vs ++ [t2]))
            (Fun "freshVariables" (map freshVariable vs ++ [t1])) -- note the argument order: use unify h t instead of unify t h to ensure mapping from variables (element V) to abstract variables (element A)
 
-counter :: IORef Int
-{-# NOINLINE counter #-}
-counter = unsafePerformIO (newIORef 0)
-
-freshVariable :: Term' -> Term' -- TODO: eliminate impurity introduced by using unsafePerformIO
-freshVariable _ = Var ("T" ++ show (unsafePerformIO (atomicModifyIORef counter (\x -> (x+1,x)))))
-
 restrictSubstToG :: Subst' -> G -> Subst'
 restrictSubstToG sub g =
     fromMap
         (Data.Map.filterWithKey
              (\k _ ->
-                   elem (AVar k) g)
-             (toMap sub))
-
--- isSubstCompatibleToKB      G: AVars in G need to map to ground terms (or another AVar from G),   + U???
+                   elem (Var k) g)
+             (toMap sub))-- isSubstCompatibleToKB      G: AVars in G need to map to ground terms (or another AVar from G),   + U???

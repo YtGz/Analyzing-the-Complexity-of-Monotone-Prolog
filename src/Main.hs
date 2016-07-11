@@ -1,10 +1,14 @@
 {-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types, UndecidableInstances #-}
 module Main where
 
+import           System.Environment
+import           Language.Prolog.Parser
+import           Query.Utilities
 import           Data.Rewriting.Substitution (Subst, GSubst, unify, apply)
 import qualified Data.Rewriting.Substitution.Type as Subst
 import           Data.Rewriting.Term.Type                (Term (..))
 import           SymbolicEvaluationGraphs.Types
+import           SymbolicEvaluationGraphs.Utilities
 import           SymbolicEvaluationGraphs.InferenceRules
 import           Data.Maybe
 import           Data.Map
@@ -38,4 +42,11 @@ import           Data.Map
 -- main = print (apply (fromJust (unify' input input)) input)          -- replaces initial variables with initial (fresh) abstract variables
        -- where input = Fun "add" [Var "X", Fun "s" [Var "Y"]]
 
-main = print (eval (caseRule ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList []), Nothing)],([],[]))))
+-- main = print (eval (caseRule ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList []), Nothing)],([],[]))))
+
+main = do
+  as <- getArgs
+  (exprs,_) <- parseProlog2 (head as)
+  print (getInitialAbstractState (head (getQueryClasses exprs)))
+
+--main = print (show (freshVariable (Var "X")) ++ show (freshVariable (Var "Y")))
