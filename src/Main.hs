@@ -8,7 +8,6 @@ import           SymbolicEvaluationGraphs.Types
 import           SymbolicEvaluationGraphs.InferenceRules
 import           Data.Maybe
 import           Data.Map
-import           Data.Implicit
 
 --main = print (suc ([(Hole, "")],([AVar "T1", AVar "T2"],[])))
 
@@ -39,9 +38,4 @@ import           Data.Implicit
 -- main = print (apply (fromJust (unify' input input)) input)          -- replaces initial variables with initial (fresh) abstract variables
        -- where input = Fun "add" [Var "X", Fun "s" [Var "Y"]]
 
-main = print (eval test (caseRule test ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList []), Nothing)],([],[]))))
-
--- main = print test
-
-test :: Implicit_ [Clause] => [Clause]
-test = param_
+main = print (eval (caseRule ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList []), Nothing)],([],[]))))
