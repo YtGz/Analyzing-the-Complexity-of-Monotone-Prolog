@@ -47,6 +47,39 @@ import           Data.Map
 main = do
   as <- getArgs
   (exprs,_) <- parseProlog2 (head as)
-  print (getInitialAbstractState (head (getQueryClasses exprs)))
+  let o = getInitialAbstractState (head (getQueryClasses exprs))
+      o' = caseRule o
+      os = eval o'
+      o1 = caseRule (head os)
+      o1' = backtrack o1
+      o2 = eval (head (tail os))
+      o3 = caseRule (head o2)
+      in do
+        print o
+        putStrLn ""
+        print o'
+        putStrLn ""
+        print os
+        putStrLn ""
+        putStrLn ""
+        print (head os)
+        putStrLn ""
+        print o1
+        putStrLn ""
+        print o1'
+        putStrLn ""
+        putStrLn ""
+        putStrLn ""
+        print (head (tail os))
+        putStrLn ""
+        print o2
+        putStrLn ""
+        putStrLn ""
+        print (head o2)
+        putStrLn ""
+        print o3
+        putStrLn ""
+        putStrLn ""
+        print (head (tail o2))
 
 -- main = print (show (freshVariable (Var "")) ++ show (freshVariable (Var ""))) -- the two fresh variables should be distinct
