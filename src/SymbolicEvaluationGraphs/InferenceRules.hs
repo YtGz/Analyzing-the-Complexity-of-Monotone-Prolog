@@ -57,7 +57,7 @@ eval ((Term t,sub,Just (h,b)):s,(g,u)) =
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
 
 backtrack :: AbstractState -> AbstractState
-backtrack (state@((_,_,Just _):_),kb) = (tail state, kb) 
+backtrack (state@((_,_,Just _):_),kb) = (tail state, kb)
 
 root :: Term' -> String
 root (Var s) = s
@@ -76,10 +76,9 @@ slice t =
 unify'
     :: Term' -> Term' -> Maybe Subst'
 unify' t1 t2 =
-    let vs = map Var (Data.Rewriting.Term.vars t1)
-    in unify
-           (Fun "freshVariables" (vs ++ [t2]))
-           (Fun "freshVariables" (map freshVariable vs ++ [t1])) -- note the argument order: use unify h t instead of unify t h to ensure mapping from variables (element V) to abstract variables (element A)
+    let Just s = unify t2 t1 -- note the argument order: use unify h t instead of unify t h to ensure mapping from variables (element V) to abstract variables (element A)
+        vs = filter (\(Var x) -> not (isAbstractVariable x)) (Data.Map.elems (toMap s))
+    in s `compose` (unify vs (map freshVariable vs))
 
 restrictSubstToG :: Subst' -> G -> Subst'
 restrictSubstToG sub g =

@@ -186,7 +186,10 @@ readPrologFile :: IO [Clause]
 readPrologFile = do
   as <- getArgs
   (exprs,_) <- parseProlog2 (head as)
-  return (map (termToClause . exprToTerm) (filter (not . isQuery) exprs))
+  let queries = map (termToClause . exprToTerm) (filter (not . isQuery) exprs) in
+    if hasNoAbstractVariables queries
+      then return queries
+      else error "Source program contains variables of the form \"T\" ++ [Int]. Try renaming."
 
 
 ------------------------------------------------------------------------------
