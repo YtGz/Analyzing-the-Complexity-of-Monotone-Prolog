@@ -3,6 +3,7 @@
 module SymbolicEvaluationGraphs.InferenceRules where
 
 import Data.Maybe
+import Data.List
 import qualified Data.Map (elems, filter, filterWithKey)
 import Control.Arrow
 import Data.Implicit
@@ -75,10 +76,19 @@ slice t =
 -- unify, introducing fresh abstract variables
 unify'
     :: Term' -> Term' -> Maybe Subst'
-unify' t1 t2 =
-    let Just s = unify t2 t1 -- note the argument order: use unify h t instead of unify t h to ensure mapping from variables (element V) to abstract variables (element A)
-        vs = filter (\(Var x) -> not (isAbstractVariable x)) (Data.Map.elems (toMap s))
-    in s `compose` (unify vs (map freshVariable vs))
+unify' t1 t2
+  | Just s <- unify t2 t1   -- note the argument order: use unify h t instead of unify t h to ensure mapping from variables (element V) to abstract variables (element A)
+   =
+      let vs =
+              map
+                  Var
+                  (nub
+                       (concatMap
+                            Data.Rewriting.Term.vars
+                            (Data.Map.elems (toMap s))))
+      in Just
+             (fromJust (unify (Fun "" vs) (Fun "" (map freshVariable vs))) `compose`
+              s) -- compose takes arguments in reverse order!!!
 
 restrictSubstToG :: Subst' -> G -> Subst'
 restrictSubstToG sub g =
