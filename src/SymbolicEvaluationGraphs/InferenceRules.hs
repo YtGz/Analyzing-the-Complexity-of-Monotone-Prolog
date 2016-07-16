@@ -4,10 +4,10 @@ module SymbolicEvaluationGraphs.InferenceRules where
 
 import Data.Maybe
 import Data.List
-import qualified Data.Map (elems, filter, filterWithKey)
+import qualified Data.Map (elems, filter, filterWithKey, fromList)
 import Control.Arrow
 import Data.Implicit
-import Data.Rewriting.Substitution
+import Data.Rewriting.Substitution (apply, compose, unify)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import qualified Data.Rewriting.Term
 import Data.Rewriting.Term.Type (Term(..))
@@ -98,4 +98,67 @@ restrictSubstToG sub g =
                    elem (Var k) g)
              (toMap sub))
 
--- isSubstCompatibleToKB      G: AVars in G need to map to ground terms (or another AVar from G),   + U???
+applyRule :: AbstractState -> [AbstractState]
+applyRule s@([],_) = [s]
+applyRule s@((Hole,_,_):_,_) = applyRule (suc s)
+applyRule s@((_,_,Nothing):_,_) = applyRule (caseRule s)
+applyRule s =
+    if isBacktrackingApplicable s
+        then applyRule (backtrack s)
+        else applyRule s1 ++ applyRule s2
+  where
+    ss = eval s
+    s1 = head ss
+    s2 = head (tail ss)
+
+-- we can use the backtrack rule if there is no concretization γ w.r.t. KB such that tγ ~ h
+isBacktrackingApplicable
+    :: AbstractState -> Bool
+isBacktrackingApplicable ((Term t,_,Just (h,_)):_,(g,u)) =
+    isNothing c || isNothing (unify (apply (fromJust c) t) h)
+  where
+    c' =
+        fromMap
+            (Data.Map.fromList
+                 (map
+                      (\(t@(Var v),p) ->
+                            let s =
+                                    fromJust
+                                        (Data.Rewriting.Term.subtermAt h p)
+                            in if notElem t g || Data.Rewriting.Term.isGround s
+                                   then (v, s)
+                                   else ( v
+                                        , fromMap
+                                              (Data.Map.fromList
+                                                   (map
+                                                        (\x ->
+                                                              (x, Fun "" []))
+                                                        (Data.Rewriting.Term.vars
+                                                             s))) `apply`
+                                          s))
+                      (filter
+                           (\x ->
+                                 case x of
+                                     (Var _,_) -> True
+                                     _ -> False)
+                           (map
+                                (\p ->
+                                      ( fromJust
+                                            (Data.Rewriting.Term.subtermAt
+                                                 t
+                                                 [p])
+                                      , [p]))
+                                [0 .. arityOfRootSymbol t]))))
+    c   -- check for compatibility with U
+     =
+        if any
+               (\(t1,t2) ->
+                     isJust (unify (apply c' t1) (apply c' t2)))
+               u
+            then Nothing
+            else Just c'
+
+--note that abstract variables are (by definition of the eval rule) necessarily always positioned *directly* below the root (i.e. they appear as arguments of the root function)
+arityOfRootSymbol
+    :: Term' -> Int
+arityOfRootSymbol (Fun _ xs) = length xs
