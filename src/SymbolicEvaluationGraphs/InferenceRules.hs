@@ -16,35 +16,32 @@ import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities
 
 suc :: AbstractState -> AbstractState
-suc (state@((Hole,_,Nothing):_),kb) = (tail state, kb)
+suc (state@(([],_,Nothing):_),kb) = (tail state, kb)
 suc _ = error "Cannot apply 'suc': Malformed AbstractState"
 
 caseRule :: AbstractState -> AbstractState
-caseRule ((Term t,sub,Nothing):s,kb) =
+caseRule ((t:qs,sub,Nothing):s,kb) =
     ( (let f clauseArray term substitution =
                if null clauseArray
                    then []
-                   else (Term term, substitution, head clauseArray) :
+                   else (term, substitution, head clauseArray) :
                         f (tail clauseArray) term substitution
        in f)
           (map Just (slice t))
-          t
+          (t : qs)
           sub ++
       s
     , kb)
 caseRule _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 
 eval :: AbstractState -> [AbstractState] --TODO: apply mgu also to KB
-eval ((Term t,sub,Just (h,b)):s,(g,u)) =
+eval ((t:qs,sub,Just (h,b)):s,(g,u)) =
     let (Just mgu) = unify' t h
         mguG = restrictSubstToG mgu g
-    in [ ( map
-               (\x ->
-                     (Term (apply mgu x), compose sub mgu, Nothing))
-               b ++
+    in [ ( (map (apply mgu) (b ++ qs), compose sub mgu, Nothing) :
            map
-               (\(Term t',s',c') ->
-                     (Term (apply mguG t'), compose s' mguG, c'))
+               (\(t',s',c') ->
+                     (map (apply mguG) t', compose s' mguG, c'))
                s  {-use new abstractVars-}
          , ( map
                  Var
@@ -97,8 +94,8 @@ restrictSubstToG sub g =
              (toMap sub))
 
 applyRule :: AbstractState -> [AbstractState]
-applyRule s@([],_) = [s]
-applyRule s@((Hole,_,_):_,_) = applyRule (suc s)
+applyRule s@([],_) = [s] -- just for output (base case of recursion)
+applyRule s@(([],_,_):_,_) = applyRule (suc s)
 applyRule s@((_,_,Nothing):_,_) = applyRule (caseRule s)
 applyRule s =
     if isBacktrackingApplicable s
@@ -112,7 +109,7 @@ applyRule s =
 -- we can use the backtrack rule if there is no concretization γ w.r.t. KB such that tγ ~ h
 isBacktrackingApplicable
     :: AbstractState -> Bool
-isBacktrackingApplicable ((Term t,_,Just (h,_)):_,(g,u)) =
+isBacktrackingApplicable ((t:_,_,Just (h,_)):_,(g,u)) =
     isNothing c || isNothing (unify (apply (fromJust c) t) h)
   where
     c' =

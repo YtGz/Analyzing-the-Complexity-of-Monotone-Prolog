@@ -53,7 +53,7 @@ termToClause _ = error "Cannot apply 'exprToClause': Malformed Clause"
 
 getInitialAbstractState :: QueryClass -> AbstractState
 getInitialAbstractState (f,m) =
-    ([(Term (Fun f vs), fromMap (fromList []), Nothing)], (gs, []))
+    ([([Fun f vs], fromMap (fromList []), Nothing)], (gs, []))
   where
     (vs,gs) =
         foldr

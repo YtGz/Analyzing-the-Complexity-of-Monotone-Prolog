@@ -13,11 +13,6 @@ type AbstractVariable = Term'
 
 type U = [(Term', Term')]
 
-type State = [(Goal, Subst', Maybe Clause)]
-
-data Goal
-    = Term Term'
-    | Hole
-    deriving (Show)
+type State = [([Term'], Subst', Maybe Clause)]
 
 type Clause = (Term', [Term']) -- h :- B
