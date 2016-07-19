@@ -46,13 +46,11 @@ eval ((Term t,sub,Just (h,b)):s,(g,u)) =
                (\(Term t',s',c') ->
                      (Term (apply mguG t'), compose s' mguG, c'))
                s  {-use new abstractVars-}
-         , ( Data.Map.elems
-                 (Data.Map.filter
-                      (\x ->
-                            case x of
-                                Var _ -> True
-                                _ -> False)
-                      (toMap mguG))
+         , ( map
+                 Var
+                 (concatMap
+                      Data.Rewriting.Term.vars
+                      (Data.Map.elems (toMap mguG)))
            , map (apply mguG *** apply mguG) u))
        , (s, (g, u ++ [(t, h)]))]
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
@@ -148,7 +146,7 @@ isBacktrackingApplicable ((Term t,_,Just (h,_)):_,(g,u)) =
                                                  t
                                                  [p])
                                       , [p]))
-                                [0 .. arityOfRootSymbol t]))))
+                                [0 .. arityOfRootSymbol t - 1]))))
     c   -- check for compatibility with U
      =
         if any

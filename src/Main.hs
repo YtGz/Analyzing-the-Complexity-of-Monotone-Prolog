@@ -82,4 +82,12 @@ main = do
         putStrLn ""
         print (head (tail o2))
 
+{-main = do
+  as <- getArgs
+  (exprs,_) <- parseProlog2 (head as)
+  let o = getInitialAbstractState (head (getQueryClasses exprs)) in do
+    print o
+    putStrLn ""
+    print (applyRule o)-}
+
 -- main = print (show (freshVariable (Var "")) ++ show (freshVariable (Var ""))) -- the two fresh variables should be distinct
