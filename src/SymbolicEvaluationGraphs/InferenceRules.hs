@@ -157,3 +157,47 @@ isBacktrackingApplicable ((t:_,_,Just (h,_)):_,(g,u)) =
 arityOfRootSymbol
     :: Term' -> Int
 arityOfRootSymbol (Fun _ xs) = length xs
+
+-- split rule for states with a single goal
+split
+    :: AbstractState -> [AbstractState]
+split ([(t:qs,sub,Nothing)],(g,u)) =
+    [ ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
+    , ([(map (apply d) qs, d, Nothing)], (g', map (apply d *** apply d) u))]
+  where
+    vs =
+        map
+            Var
+            (nub
+                 (Data.Rewriting.Term.vars t ++
+                  concatMap Data.Rewriting.Term.vars qs)) \\
+        g
+    d = fromJust (unify (Fun "" vs) (Fun "" (map freshVariable vs)))
+    g' = g `union` map (apply d) (nextG t g)
+
+nextG :: Term' -> G -> G
+nextG t g =
+    nub
+        (concatMap
+             (\p ->
+                   map
+                       Var
+                       (Data.Rewriting.Term.vars
+                            (fromJust (Data.Rewriting.Term.subtermAt t [p]))))
+             (groundnessAnalysis (root t) gPos))
+  where
+    gPos =
+        filter
+            (\p ->
+                  map
+                      Var
+                      (nub
+                           (Data.Rewriting.Term.vars
+                                (fromJust (Data.Rewriting.Term.subtermAt t [p])))) ==
+                  g)
+            [0 .. arityOfRootSymbol t - 1]
+
+-- mocking groundness analysis
+groundnessAnalysis
+    :: String -> [Int] -> [Int]
+groundnessAnalysis f groundInputs = groundInputs
