@@ -14,6 +14,7 @@ import Data.Rewriting.Term.Type (Term(..))
 import ExprToTerm.Conversion
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities
+import Diagrams.TwoD.Layout.Tree
 
 suc :: AbstractState -> AbstractState
 suc (state@(([],_,Nothing):_),kb) = (tail state, kb)
@@ -34,22 +35,22 @@ caseRule ((t:qs,sub,Nothing):s,kb) =
     , kb)
 caseRule _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 
-eval :: AbstractState -> [AbstractState] --TODO: apply mgu also to KB
+eval :: AbstractState -> (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) =
     let (Just mgu) = unify' t h
         mguG = restrictSubstToG mgu g
-    in [ ( (map (apply mgu) (b ++ qs), compose sub mgu, Nothing) :
+    in ( ( (map (apply mgu) (b ++ qs), compose sub mgu, Nothing) :
            map
                (\(t',s',c') ->
                      (map (apply mguG) t', compose s' mguG, c'))
-               s  {-use new abstractVars-}
+               s
          , ( map
                  Var
                  (concatMap
                       Data.Rewriting.Term.vars
                       (Data.Map.elems (toMap mguG)))
            , map (apply mguG *** apply mguG) u))
-       , (s, (g, u ++ [(t, h)]))]
+       , (s, (g, u ++ [(t, h)])))
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
 
 backtrack :: AbstractState -> AbstractState
@@ -93,18 +94,18 @@ restrictSubstToG sub g =
                    elem (Var k) g)
              (toMap sub))
 
-applyRule :: AbstractState -> [AbstractState]
-applyRule s@([],_) = [s] -- just for output (base case of recursion)
-applyRule s@(([],_,_):_,_) = applyRule (suc s)
-applyRule s@((_,_,Nothing):_,_) = applyRule (caseRule s)
-applyRule s =
+applyRules :: AbstractState -> BTree AbstractState
+applyRules s@([],_) = leaf s -- just for output (base case of recursion)
+applyRules s@(([],_,_):_,_) = BNode s (applyRules (suc s)) Empty
+applyRules s@((_,_,Nothing):_,_) = BNode s (applyRules (caseRule s)) Empty
+applyRules s =
     if isBacktrackingApplicable s
-        then applyRule (backtrack s)
-        else applyRule s1 ++ applyRule s2
+        then BNode s (applyRules (backtrack s)) Empty
+        else BNode s (applyRules s1) (applyRules s2)
   where
     ss = eval s
-    s1 = head ss
-    s2 = head (tail ss)
+    s1 = fst ss
+    s2 = snd ss
 
 -- we can use the backtrack rule if there is no concretization γ w.r.t. KB such that tγ ~ h
 isBacktrackingApplicable

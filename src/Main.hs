@@ -44,16 +44,16 @@ import           Data.Map
 
 -- main = print (eval (caseRule ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList []), Nothing)],([],[]))))
 
-main = do
+{-main = do
   as <- getArgs
   (exprs,_) <- parseProlog2 (head as)
   let o = getInitialAbstractState (head (getQueryClasses exprs))
       o' = caseRule o
       os = eval o'
-      o1 = caseRule (head os)
+      o1 = caseRule (fst os)
       o1' = backtrack o1
-      o2 = eval (head (tail os))
-      o3 = caseRule (head o2)
+      o2 = eval (snd os)
+      o3 = caseRule (fst o2)
       in do
         print o
         putStrLn ""
@@ -62,7 +62,7 @@ main = do
         print os
         putStrLn ""
         putStrLn ""
-        print (head os)
+        print (fst os)
         putStrLn ""
         print o1
         putStrLn ""
@@ -70,24 +70,21 @@ main = do
         putStrLn ""
         putStrLn ""
         putStrLn ""
-        print (head (tail os))
+        print (snd os)
         putStrLn ""
         print o2
         putStrLn ""
         putStrLn ""
-        print (head o2)
+        print (fst o2)
         putStrLn ""
         print o3
         putStrLn ""
         putStrLn ""
-        print (head (tail o2))
+        print (snd o2)-}
 
-{-main = do
-  as <- getArgs
-  (exprs,_) <- parseProlog2 (head as)
-  let o = getInitialAbstractState (head (getQueryClasses exprs)) in do
-    print o
-    putStrLn ""
-    print (applyRule o)-}
+main = do
+      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
+      let o = getInitialAbstractState (head (getQueryClasses exprs)) in
+        printSymbolicEvaluationGraph (applyRules o)
 
 -- main = print (show (freshVariable (Var "")) ++ show (freshVariable (Var ""))) -- the two fresh variables should be distinct
