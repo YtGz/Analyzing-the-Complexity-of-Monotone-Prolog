@@ -4,8 +4,7 @@ module SymbolicEvaluationGraphs.Utilities
   ,hasNoAbstractVariables
   ,termToClause
   ,getInitialAbstractState
-  ,printSymbolicEvaluationGraph
-  ,circlea)
+  ,printSymbolicEvaluationGraph)
   where
 
 import Data.IORef
@@ -22,6 +21,7 @@ import Data.Maybe
 import Diagrams.Prelude
 import Diagrams.Backend.SVG.CmdLine
 import Diagrams.TwoD.Layout.Tree
+import Graphics.SVGFonts
 
 counter :: IORef Int
 {-# NOINLINE counter #-}
@@ -77,12 +77,38 @@ printSymbolicEvaluationGraph :: BTree AbstractState -> IO ()
 printSymbolicEvaluationGraph t =
     mainWith
         ((renderTree
-              (\n ->
-                    text (show n) # fontSizeL 0.01 `atop` circle 0.5 # fc white)
+              id
               (~~)
-              (fromJust (symmLayoutBin t)) #
+              (fromJust
+                   (symmLayoutBin'
+                        (with & slVSep .~ 4 & slWidth .~ fromMaybe (0, 0) .
+                         extentX &
+                         slHeight .~
+                         fromMaybe (0, 0) .
+                         extentY)
+                        (fmap
+                             (\n ->
+                                   let t =
+                                           stroke
+                                               (textSVG'
+                                                    (TextOpts
+                                                         bit
+                                                         INSIDE_H
+                                                         KERN
+                                                         False
+                                                         1
+                                                         1)
+                                                    (show n)) #
+                                           fc black #
+                                           lwL 0.00002
+                                   in t `atop`
+                                      rect
+                                          (width t + (height t * 1.8))
+                                          (height t + (height t * 1.8)) #
+                                      fc white #
+                                      lwL 0.2)
+                             t))) #
+          lwL 0.2 #
           centerXY #
-          pad 1.1) :: Diagram B)
-
-circlea :: IO()
-circlea = mainWith (circle 1 :: Diagram B)
+          pad 1.4 #
+          scale 10) :: Diagram B)
