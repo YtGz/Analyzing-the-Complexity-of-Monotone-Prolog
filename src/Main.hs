@@ -45,8 +45,8 @@ import           Data.Map
 -- main = print (eval (caseRule ([(Term (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]), Subst.fromMap (Data.Map.fromList []), Nothing)],([],[]))))
 
 {-main = do
-  as <- getArgs
-  (exprs,_) <- parseProlog2 (head as)
+  --as <- getArgs
+  (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl" --(head as)
   let o = getInitialAbstractState (head (getQueryClasses exprs))
       o' = caseRule o
       os = eval o'
@@ -82,11 +82,11 @@ import           Data.Map
         putStrLn ""
         print (snd o2)-}
 
-{-main = do
+main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
       let o = getInitialAbstractState (head (getQueryClasses exprs)) in
-        printSymbolicEvaluationGraph (applyRules o)-}
+        printSymbolicEvaluationGraph (applyRules o)
 
-main = print (showTerm' (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]))
+--main = print (showTerm' (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]))
 
 -- main = print (show (freshVariable (Var "")) ++ show (freshVariable (Var ""))) -- the two fresh variables should be distinct

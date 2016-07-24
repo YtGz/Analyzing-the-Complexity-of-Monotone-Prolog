@@ -14,9 +14,9 @@ import ExprToTerm.Conversion
 import Data.Rewriting.Term.Type (Term(..))
 import SymbolicEvaluationGraphs.Types
 import Query.Utilities
-import Data.Rewriting.Substitution.Type (fromMap)
+import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import Data.Rewriting.Term (vars)
-import Data.Map (fromList)
+import Data.Map (fromList, toList)
 import Text.Read (readMaybe)
 import Data.Maybe
 import Data.String.Utils
@@ -78,9 +78,10 @@ getInitialAbstractState (f,m) =
 printSymbolicEvaluationGraph :: BTree AbstractState -> IO ()
 printSymbolicEvaluationGraph t =
     mainWith
-        ((renderTree
+        ((renderTree'
               id
-              (~~)
+              (\(s,p1) (_,p2) ->
+                    p1 ~~ p2)
               (fromJust
                    (symmLayoutBin'
                         (with & slVSep .~ 4 & slWidth .~ fromMaybe (0, 0) .
@@ -89,20 +90,8 @@ printSymbolicEvaluationGraph t =
                          fromMaybe (0, 0) .
                          extentY)
                         (fmap
-                             (\n ->
-                                   let t =
-                                           stroke
-                                               (textSVG'
-                                                    (TextOpts
-                                                         bit
-                                                         INSIDE_H
-                                                         KERN
-                                                         False
-                                                         1
-                                                         1)
-                                                    (show n)) #
-                                           fc black #
-                                           lwL 0.00002
+                             (\s ->
+                                   let t = printAbstractState s
                                    in t `atop`
                                       rect
                                           (width t + (height t * 1.8))
@@ -116,19 +105,49 @@ printSymbolicEvaluationGraph t =
           padY 1.4 #
           scale 10) :: Diagram B)
 
-{-printAbstractState :: AbstractState -> ?
-printAbstractState ([([Term'], Subst', Maybe Clause)], (G,U)) = stroke
-    (textSVG'
-         (TextOpts
-              bit
-              INSIDE_H
-              KERN
-              False
-              1
-              1)
-              map (\t -> show t ++ "") qs-}
+printAbstractState :: AbstractState -> QDiagram B V2 Double Any
+printAbstractState ([],_) = write "e"
+printAbstractState (gs,(g,u)) =
+    (foldr
+         ((|||) . (||| (strutX 1.2 ||| write "|" ||| strutX 1.2)) . f)
+         mempty
+         (init gs) |||
+     f (last gs)) #
+    centerXY
+  where
+    f (qs,sub,_{-TODO: superscript clause-}) =
+        write
+            (if null qs
+                 then ""
+                 else concatMap ((++ ", ") . showTerm') (init qs) ++
+                      showTerm' (last qs)) |||
+        writeSubscript (showSubst' sub)
+
+write :: String -> QDiagram B V2 Double Any
+write s =
+    stroke (textSVG' (TextOpts bit INSIDE_H KERN False 1 1) s) # fc black #
+    lwL 0.00002
+
+writeSubscript :: String -> QDiagram B V2 Double Any
+writeSubscript s = strutX 0.2 ||| write s # translateY (-0.35) # scale 0.55
 
 showTerm' :: Term' -> String
 showTerm' (Fun f []) = replace "Left " "" f
-showTerm' (Fun f args) = replace "Left " "" f ++ "(" ++ concatMap ((++ ",") . showTerm') (init args) ++ showTerm' (last args) ++ ")"
+showTerm' (Fun f args) =
+    replace "Left " "" f ++ "(" ++ concatMap ((++ ",") . showTerm') (init args) ++
+    showTerm' (last args) ++
+    ")"
 showTerm' (Var v) = v
+
+showSubst' :: Subst' -> String
+showSubst' sub =
+    if null ls
+        then ""
+        else "{" ++ concatMap ((++ ", ") . f) (init ls) ++ f (last ls) ++ "}"
+  where
+    f (v,t) = v ++ " -> " ++ showTerm' t
+    ls =
+        filter
+            (\(v,t) ->
+                  Var v /= t)
+            (toList (toMap sub))
