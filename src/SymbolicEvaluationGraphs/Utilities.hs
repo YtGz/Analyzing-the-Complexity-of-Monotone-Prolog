@@ -4,7 +4,8 @@ module SymbolicEvaluationGraphs.Utilities
   ,hasNoAbstractVariables
   ,termToClause
   ,getInitialAbstractState
-  ,printSymbolicEvaluationGraph)
+  ,printSymbolicEvaluationGraph
+  ,showTerm')
   where
 
 import Data.IORef
@@ -18,6 +19,7 @@ import Data.Rewriting.Term (vars)
 import Data.Map (fromList)
 import Text.Read (readMaybe)
 import Data.Maybe
+import Data.String.Utils
 import Diagrams.Prelude
 import Diagrams.Backend.SVG.CmdLine
 import Diagrams.TwoD.Layout.Tree
@@ -110,5 +112,23 @@ printSymbolicEvaluationGraph t =
                              t))) #
           lwL 0.2 #
           centerXY #
-          pad 1.4 #
+          padX 1.1 #
+          padY 1.4 #
           scale 10) :: Diagram B)
+
+{-printAbstractState :: AbstractState -> ?
+printAbstractState ([([Term'], Subst', Maybe Clause)], (G,U)) = stroke
+    (textSVG'
+         (TextOpts
+              bit
+              INSIDE_H
+              KERN
+              False
+              1
+              1)
+              map (\t -> show t ++ "") qs-}
+
+showTerm' :: Term' -> String
+showTerm' (Fun f []) = replace "Left " "" f
+showTerm' (Fun f args) = replace "Left " "" f ++ "(" ++ concatMap ((++ ",") . showTerm') (init args) ++ showTerm' (last args) ++ ")"
+showTerm' (Var v) = v
