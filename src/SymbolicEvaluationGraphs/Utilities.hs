@@ -103,7 +103,7 @@ printSymbolicEvaluationGraph t =
           centerXY #
           padX 1.1 #
           padY 1.4 #
-          scale 10) :: Diagram B)
+          scale 15) :: Diagram B)
 
 printAbstractState :: AbstractState -> QDiagram B V2 Double Any
 printAbstractState ([],_) = write "e"
@@ -115,13 +115,13 @@ printAbstractState (gs,(g,u)) =
      f (last gs)) #
     centerXY
   where
-    f (qs,sub,_{-TODO: superscript clause-}) =
+    f (qs,sub,clause) =
         write
             (if null qs
                  then ""
                  else concatMap ((++ ", ") . showTerm') (init qs) ++
                       showTerm' (last qs)) |||
-        writeSubscript (showSubst' sub)
+        (writeSubscript (showSubst' sub) `atop` writeSuperscript (showClause clause))
 
 write :: String -> QDiagram B V2 Double Any
 write s =
@@ -129,7 +129,10 @@ write s =
     lwL 0.00002
 
 writeSubscript :: String -> QDiagram B V2 Double Any
-writeSubscript s = strutX 0.2 ||| write s # translateY (-0.35) # scale 0.55
+writeSubscript s = strutX 0.2 ||| write s # translateY (-0.55) # scale 0.55
+
+writeSuperscript :: String -> QDiagram B V2 Double Any
+writeSuperscript s = strutX 0.2 ||| write s # translateY 0.55 # scale 0.55
 
 showTerm' :: Term' -> String
 showTerm' (Fun f []) = replace "Left " "" f
@@ -151,3 +154,11 @@ showSubst' sub =
             (\(v,t) ->
                   Var v /= t)
             (toList (toMap sub))
+
+showClause :: Maybe Clause -> String
+showClause Nothing = ""
+showClause (Just (h,bs)) =
+    showTerm' h ++ " :- " ++
+    if null bs
+        then ""
+        else concatMap ((++ ", ") . showTerm') (init bs) ++ showTerm' (last bs)
