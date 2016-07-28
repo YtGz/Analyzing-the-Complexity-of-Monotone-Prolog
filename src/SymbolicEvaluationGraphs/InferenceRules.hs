@@ -94,6 +94,16 @@ restrictSubstToG sub g =
                    elem (Var k) g)
              (toMap sub))
 
+--returns the name of the rule that would be applied next
+getNextRule :: AbstractState -> String
+getNextRule ([],_) = ""
+getNextRule (([],_,_):_,_) = "suc"
+getNextRule ((_,_,Nothing):_,_) = "case"
+getNextRule s =
+    if isBacktrackingApplicable s
+        then "backtrack"
+        else "eval"
+
 applyRules :: AbstractState -> BTree AbstractState
 applyRules s@([],_) = leaf s -- just for output (base case of recursion)
 applyRules s@(([],_,_):_,_) = BNode s (applyRules (suc s)) Empty

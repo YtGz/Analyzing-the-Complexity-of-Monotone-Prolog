@@ -10,6 +10,7 @@ import           Data.Rewriting.Term.Type                (Term (..))
 import           SymbolicEvaluationGraphs.Types
 import           SymbolicEvaluationGraphs.Utilities
 import           SymbolicEvaluationGraphs.InferenceRules
+import           SymbolicEvaluationGraphs.Visualization
 import           Data.Maybe
 import           Data.Map
 
