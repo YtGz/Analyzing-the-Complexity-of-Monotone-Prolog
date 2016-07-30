@@ -78,10 +78,11 @@ printAbstractState (gs,(g,u)) =
     centerXY
   where
     f (qs,sub,clause) =
-            if null qs
-                 then write ""
-                 else foldr (((|||) . (||| write ", ")) . (`printTerm'` g)) mempty (init qs) |||
-                      printTerm' (last qs) g |||
+        write
+            (if null qs
+                 then ""
+                 else concatMap ((++ ", ") . (`showTermWithG` g)) (init qs) ++
+                      showTermWithG (last qs) g) |||
         (writeSubscript (showSubst' sub) `atop`
          writeSuperscript (showClause clause))
 
@@ -96,14 +97,6 @@ writeSubscript s = strutX 0.2 ||| write s # translateY (-0.55) # scale 0.55
 writeSuperscript :: String -> QDiagram B V2 Double Any
 writeSuperscript s = strutX 0.2 ||| write s # translateY 0.55 # scale 0.55
 
-printTerm' :: Term' -> G -> QDiagram B V2 Double Any
-printTerm' (Fun f []) _ = write (replace "Left " "" f)
-printTerm' (Fun f args) g =
-    write (replace "Left " "" f ++ "(") ||| foldr (((|||) . (||| write ",")) . (`printTerm'` g)) mempty (init args) |||
-    printTerm' (last args) g |||
-    write ")"
-printTerm' (Var v) g = write v
-
 showTerm' :: Term' -> String
 showTerm' (Fun f []) = replace "Left " "" f
 showTerm' (Fun f args) =
@@ -111,6 +104,14 @@ showTerm' (Fun f args) =
     showTerm' (last args) ++
     ")"
 showTerm' (Var v) = v
+
+showTermWithG :: Term' -> G -> String
+showTermWithG (Fun f []) _ = replace "Left " "" f
+showTermWithG (Fun f args) g =
+    replace "Left " "" f ++ "(" ++ concatMap ((++ ",") . (`showTermWithG` g)) (init args) ++
+    showTermWithG (last args) g ++
+    ")"
+showTermWithG (Var v) g = if Var v `elem` g then "^" ++ v else v
 
 showSubst' :: Subst' -> String
 showSubst' sub =
