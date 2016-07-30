@@ -19,7 +19,7 @@ module SymbolicEvaluationGraphs.Visualization where
           ((renderTree'
                 fst
                 (\((n,s),p1) (_,p2) -> let rule = write (getNextRule s) in
-                      rule # translate (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) {-^+^ r2 (fromJust (extentX rule))-}) `atop` p1 ~~ p2)
+                      rule # translate (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^ (V2 (fst (fromJust (extentX rule))) 0 ^-^ V2 (snd (fromJust (extentX rule))) 0)) `atop` p1 ~~ p2)
                 (fromJust
                      (symmLayoutBin'
                           (with & slVSep .~ 4 & slWidth .~ fromMaybe (0, 0) .
