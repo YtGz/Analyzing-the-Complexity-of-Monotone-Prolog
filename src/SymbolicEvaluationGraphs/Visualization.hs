@@ -20,15 +20,21 @@ printSymbolicEvaluationGraph t =
               fst
               (\((n,s),p1) (_,p2) ->
                     let rule = write (getNextRule s)
-                        additionToU = if fst (unp2 p2) >= fst (unp2 p1) then write (getAdditionToU s) else write ""
+                        additionToU =
+                            if fst (unp2 p2) >= fst (unp2 p1)
+                                then write (getAdditionToU s)
+                                else write ""
                     in rule #
                        translate
                            (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
-                            (negated (V2 (snd (fromJust (extentX rule))) 0) ^+^ unit_X)) `atop`
+                            (negated (V2 (snd (fromJust (extentX rule))) 0) ^+^
+                             unit_X)) `atop`
                        additionToU #
-                          translate
-                              (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
-                               (negated (V2 (fst (fromJust (extentX additionToU))) 0) # scale 1.2)) `atop`
+                       translate
+                           (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
+                            (negated
+                                 (V2 (fst (fromJust (extentX additionToU))) 0) #
+                             scale 1.2)) `atop`
                        p1 ~~
                        p2)
               (fromJust
@@ -72,11 +78,10 @@ printAbstractState (gs,(g,u)) =
     centerXY
   where
     f (qs,sub,clause) =
-        write
-            (if null qs
-                 then ""
-                 else concatMap ((++ ", ") . showTerm') (init qs) ++
-                      showTerm' (last qs)) |||
+            if null qs
+                 then write ""
+                 else foldr (((|||) . (||| write ", ")) . (`printTerm'` g)) mempty (init qs) |||
+                      printTerm' (last qs) g |||
         (writeSubscript (showSubst' sub) `atop`
          writeSuperscript (showClause clause))
 
@@ -90,6 +95,14 @@ writeSubscript s = strutX 0.2 ||| write s # translateY (-0.55) # scale 0.55
 
 writeSuperscript :: String -> QDiagram B V2 Double Any
 writeSuperscript s = strutX 0.2 ||| write s # translateY 0.55 # scale 0.55
+
+printTerm' :: Term' -> G -> QDiagram B V2 Double Any
+printTerm' (Fun f []) _ = write (replace "Left " "" f)
+printTerm' (Fun f args) g =
+    write (replace "Left " "" f ++ "(") ||| foldr (((|||) . (||| write ",")) . (`printTerm'` g)) mempty (init args) |||
+    printTerm' (last args) g |||
+    write ")"
+printTerm' (Var v) g = write v
 
 showTerm' :: Term' -> String
 showTerm' (Fun f []) = replace "Left " "" f
