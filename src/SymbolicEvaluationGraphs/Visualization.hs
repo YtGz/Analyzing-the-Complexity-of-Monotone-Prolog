@@ -13,16 +13,16 @@ import Diagrams.TwoD.Layout.Tree
 import Graphics.SVGFonts
 import SymbolicEvaluationGraphs.InferenceRules (getNextRule)
 
-printSymbolicEvaluationGraph :: BTree AbstractState -> IO ()
+printSymbolicEvaluationGraph :: BTree (AbstractState, String) -> IO ()
 printSymbolicEvaluationGraph t =
     mainWith
         ((renderTree'
               fst
               (\((n,s),p1) (_,p2) ->
-                    let rule = write (getNextRule s)
+                    let rule = write (snd s)
                         additionToU =
                             if fst (unp2 p2) >= fst (unp2 p1)
-                                then write (getAdditionToU s)
+                                then write (getAdditionToU (fst s))
                                 else write ""
                     in rule #
                        translate
@@ -48,7 +48,7 @@ printSymbolicEvaluationGraph t =
                          fst)
                         (fmap
                              (\s ->
-                                   let t = printAbstractState s
+                                   let t = printAbstractState (fst s)
                                    in ( t `atop`
                                         rect
                                             (width t + (height t * 1.8))
@@ -65,7 +65,7 @@ printSymbolicEvaluationGraph t =
 
 getAdditionToU :: AbstractState -> String
 getAdditionToU ((t:_,_,Just (h,_)):_,_) = showTerm' t ++ " !~ " ++ showTerm' h
-getAdditionToU _ = error "Malformed abstract state."
+getAdditionToU s = error "Malformed abstract state."
 
 printAbstractState :: AbstractState -> QDiagram B V2 Double Any
 printAbstractState ([],_) = write "e"
@@ -108,10 +108,14 @@ showTerm' (Var v) = v
 showTermWithG :: Term' -> G -> String
 showTermWithG (Fun f []) _ = replace "Left " "" f
 showTermWithG (Fun f args) g =
-    replace "Left " "" f ++ "(" ++ concatMap ((++ ",") . (`showTermWithG` g)) (init args) ++
+    replace "Left " "" f ++ "(" ++
+    concatMap ((++ ",") . (`showTermWithG` g)) (init args) ++
     showTermWithG (last args) g ++
     ")"
-showTermWithG (Var v) g = if Var v `elem` g then "^" ++ v else v
+showTermWithG (Var v) g =
+    if Var v `elem` g
+        then "^" ++ v
+        else v
 
 showSubst' :: Subst' -> String
 showSubst' sub =

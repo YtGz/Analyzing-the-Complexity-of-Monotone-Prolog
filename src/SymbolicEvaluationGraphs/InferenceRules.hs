@@ -94,24 +94,14 @@ restrictSubstToG sub g =
                    elem (Var k) g)
              (toMap sub))
 
---returns the name of the rule that would be applied next
-getNextRule :: AbstractState -> String
-getNextRule ([],_) = ""
-getNextRule (([],_,_):_,_) = "suc"
-getNextRule ((_,_,Nothing):_,_) = "case"
-getNextRule s =
-    if isBacktrackingApplicable s
-        then "backtrack"
-        else "eval"
-
-applyRules :: AbstractState -> BTree AbstractState
-applyRules s@([],_) = leaf s -- just for output (base case of recursion)
-applyRules s@(([],_,_):_,_) = BNode s (applyRules (suc s)) Empty
-applyRules s@((_,_,Nothing):_,_) = BNode s (applyRules (caseRule s)) Empty
+applyRules :: AbstractState -> BTree (AbstractState, String)
+applyRules s@([],_) = leaf (s,"") -- just for output (base case of recursion)
+applyRules s@(([],_,_):_,_) = BNode (s, "suc") (applyRules (suc s)) Empty
+applyRules s@((_,_,Nothing):_,_) = BNode (s, "case") (applyRules (caseRule s)) Empty
 applyRules s =
     if isBacktrackingApplicable s
-        then BNode s (applyRules (backtrack s)) Empty
-        else BNode s (applyRules s1) (applyRules s2)
+        then BNode (s, "backtrack") (applyRules (backtrack s)) Empty
+        else BNode (s, "eval") (applyRules s1) (applyRules s2)
   where
     ss = eval s
     s1 = fst ss
