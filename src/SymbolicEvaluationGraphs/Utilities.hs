@@ -3,6 +3,7 @@ module SymbolicEvaluationGraphs.Utilities
   ,isAbstractVariable
   ,hasNoAbstractVariables
   ,termToClause
+  ,splitClauseBody
   ,getInitialAbstractState)
   where
 
@@ -50,9 +51,13 @@ hasNoAbstractVariables clauses =
            clauses
 
 termToClause :: Term' -> Clause
-termToClause (Fun ":-" args) = (head args, tail args) -- rule
-termToClause h@(Fun _ _) = (h, []) -- fact (empty body)
+termToClause (Fun ":-" args) = (head args, Just (head (tail args))) -- rule
+termToClause h@(Fun _ _) = (h, Nothing) -- fact (empty body)
 termToClause _ = error "Cannot apply 'exprToClause': Malformed Clause"
+
+splitClauseBody :: Term' -> [Term']
+splitClauseBody (Fun "," bs) = bs
+splitClauseBody b = [b]
 
 getInitialAbstractState :: QueryClass -> AbstractState
 getInitialAbstractState (f,m) =

@@ -3,6 +3,7 @@ module SymbolicEvaluationGraphs.Visualization where
 import ExprToTerm.Conversion
 import Data.Rewriting.Term.Type (Term(..))
 import SymbolicEvaluationGraphs.Types
+import SymbolicEvaluationGraphs.Utilities (splitClauseBody)
 import Data.Rewriting.Substitution.Type (toMap)
 import Data.Map (toList)
 import Data.Maybe
@@ -11,7 +12,6 @@ import Diagrams.Prelude
 import Diagrams.Backend.SVG.CmdLine
 import Diagrams.TwoD.Layout.Tree
 import Graphics.SVGFonts
-import SymbolicEvaluationGraphs.InferenceRules (getNextRule)
 
 printSymbolicEvaluationGraph :: BTree (AbstractState, String) -> IO ()
 printSymbolicEvaluationGraph t =
@@ -132,8 +132,10 @@ showSubst' sub =
 
 showClause :: Maybe Clause -> String
 showClause Nothing = ""
-showClause (Just (h,bs)) =
+showClause (Just (h,b)) =
     showTerm' h ++ " :- " ++
-    if null bs
+    if isNothing b
         then ""
-        else concatMap ((++ ", ") . showTerm') (init bs) ++ showTerm' (last bs)
+        else let bs = splitClauseBody (fromJust b)
+             in concatMap ((++ ", ") . showTerm') (init bs) ++
+                showTerm' (last bs)

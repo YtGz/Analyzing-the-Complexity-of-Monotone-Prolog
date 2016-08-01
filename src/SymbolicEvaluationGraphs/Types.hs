@@ -15,4 +15,4 @@ type U = [(Term', Term')]
 
 type State = [([Term'], Subst', Maybe Clause)]
 
-type Clause = (Term', [Term']) -- h :- B
+type Clause = (Term', Maybe Term') -- h :- B

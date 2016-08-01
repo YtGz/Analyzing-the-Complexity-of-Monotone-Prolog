@@ -39,7 +39,9 @@ eval :: AbstractState -> (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) =
     let (Just mgu) = unify' t h
         mguG = restrictSubstToG mgu g
-    in ( ( (map (apply mgu) (b ++ qs), compose sub mgu, Nothing) :
+    in ( ( ( map (apply mgu) (splitClauseBody (fromJust b) ++ qs)
+           , compose sub mgu
+           , Nothing) :
            map
                (\(t',s',c') ->
                      (map (apply mguG) t', compose s' mguG, c'))
@@ -95,9 +97,10 @@ restrictSubstToG sub g =
              (toMap sub))
 
 applyRules :: AbstractState -> BTree (AbstractState, String)
-applyRules s@([],_) = leaf (s,"") -- just for output (base case of recursion)
+applyRules s@([],_) = leaf (s, "") -- just for output (base case of recursion)
 applyRules s@(([],_,_):_,_) = BNode (s, "suc") (applyRules (suc s)) Empty
-applyRules s@((_,_,Nothing):_,_) = BNode (s, "case") (applyRules (caseRule s)) Empty
+applyRules s@((_,_,Nothing):_,_) =
+    BNode (s, "case") (applyRules (caseRule s)) Empty
 applyRules s =
     if isBacktrackingApplicable s
         then BNode (s, "backtrack") (applyRules (backtrack s)) Empty

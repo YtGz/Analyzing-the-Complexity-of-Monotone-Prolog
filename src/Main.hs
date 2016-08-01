@@ -11,6 +11,7 @@ import           SymbolicEvaluationGraphs.Types
 import           SymbolicEvaluationGraphs.Utilities
 import           SymbolicEvaluationGraphs.InferenceRules
 import           SymbolicEvaluationGraphs.Visualization
+import           SymbolicEvaluationGraphs.Heuristic
 import           Data.Maybe
 import           Data.Map
 
@@ -83,11 +84,22 @@ import           Data.Map
         putStrLn ""
         print (snd o2)-}
 
-main = do
+{-main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
       let o = getInitialAbstractState (head (getQueryClasses exprs)) in
-        printSymbolicEvaluationGraph (applyRules o)
+        printSymbolicEvaluationGraph (applyRules o)-}
 
 --main = print (showTerm' (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]))
 
 -- main = print (show (freshVariable (Var "")) ++ show (freshVariable (Var ""))) -- the two fresh variables should be distinct
+
+main = print (isFunctionSymbolRecursive (Fun "q" []))
+
+--main = printArrayLineByLine (getMetaPredicates (Fun "," [Var "p", Fun ";" [Fun "f" [Fun "," [Var "r", Var "r"]], Var "q"]]))
+
+printArrayLineByLine :: Show a => [a] -> IO ()
+printArrayLineByLine [] = putStrLn ""
+printArrayLineByLine (x:xs) = do
+  print x
+  putStrLn ""
+  printArrayLineByLine xs
