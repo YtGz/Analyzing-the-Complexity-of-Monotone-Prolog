@@ -164,10 +164,10 @@ arityOfRootSymbol (Fun _ xs) = length xs
 
 -- split rule for states with a single goal
 split
-    :: AbstractState -> [AbstractState]
+    :: AbstractState -> (AbstractState, AbstractState)
 split ([(t:qs,sub,Nothing)],(g,u)) =
-    [ ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
-    , ([(map (apply d) qs, d, Nothing)], (g', map (apply d *** apply d) u))]
+    ( ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
+    , ([(map (apply d) qs, d, Nothing)], (g', map (apply d *** apply d) u)))
   where
     vs =
         map
