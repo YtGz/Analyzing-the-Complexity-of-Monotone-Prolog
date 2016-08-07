@@ -6,12 +6,13 @@ import Data.Implicit
 import Data.Foldable (toList)
 import Data.Function (on)
 import Data.Maybe
-import Data.List (find, nubBy)
+import Data.List (find, nubBy, nub, (\\))
 import Data.Either.Utils
 import Data.Tree.Zipper
 import ExprToTerm.Conversion
+import Data.Rewriting.Term (vars)
 import Data.Rewriting.Term.Type (Term(..))
-import Data.Rewriting.Substitution (unify)
+import Data.Rewriting.Substitution (unify, apply)
 import Data.Rewriting.Substitution.Type (toMap, fromMap)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
@@ -434,9 +435,20 @@ branchingFactor _ = error "No function symbol provided."
 tryToApplyInstanceRule :: AbstractState
                        -> [AbstractState]
                        -> Maybe AbstractState
-tryToApplyInstanceRule s = find (\x -> let qs = (\(x,_,_) -> x) (head (fst s))
-                                           qs' = (\(x,_,_) -> x) (head (fst x)) in
-                                           length qs == length qs' && let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs) in length mu == 1 && isJust (head mu))
+tryToApplyInstanceRule ((qs,_,_):_,(g,u)) =
+    find
+        (\((qs',_,_):_,(g',u')) ->
+              length qs == length qs' &&
+              let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
+              in length mu == 1 &&
+                 isJust (head mu) &&
+                 (\xs ys ->
+                       null (xs \\ ys) && null (ys \\ xs))
+                     (nub g)
+                     (nub
+                          (concatMap
+                               (map Var . vars . apply (fromJust (head mu)))
+                               g')) && null (map (fmap (apply (fromJust (head mu)))) u' \\ u))
 
 bTreeToRoseTree :: BTree a -> Tree a
 bTreeToRoseTree (BNode e Empty Empty) = Node e []
