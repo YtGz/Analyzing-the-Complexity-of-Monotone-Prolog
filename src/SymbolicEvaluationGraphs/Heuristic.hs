@@ -103,6 +103,11 @@ applyRule tp n =
              | n >= minExSteps &&
                    (case s of
                         ((t:_,_,Nothing):_,_) ->
+                            (\x ->
+                                  case x of
+                                      (Right _) -> True
+                                      _ -> False)
+                                (Data.Rewriting.Term.root t) &&
                             isFunctionSymbolRecursive
                                 (Fun
                                      (fromRight (Data.Rewriting.Term.root t))
@@ -149,29 +154,36 @@ applyRule tp n =
                                         else Nothing
                              _ -> Nothing
                      b0 x y =
-                         fromJust
+                         fromMaybe
+                             (error "1")
                              (parent
-                                  (setTree
+                                  (insert
                                        (tree
-                                            (followThePath
-                                                 (tree
-                                                      (root
-                                                           (applyRule (fst y) n)))
-                                                 (pathToMe
-                                                      (fromJust (firstChild x)))))
-                                       (fromJust (firstChild x))))
+                                            ((fromMaybe (error "2") .
+                                              firstChild)
+                                                 (followThePath
+                                                      (tree
+                                                           (root
+                                                                (applyRule
+                                                                     (fst y)
+                                                                     n)))
+                                                      (pathToMe x))))
+                                       (first (children x))))
                      b1 x y =
-                         fromJust
+                         fromMaybe
+                             (error "4")
                              (parent
-                                  (setTree
+                                  (insert
                                        (tree
-                                            (followThePath
-                                                 (tree
-                                                      (root
-                                                           (applyRule (snd y) n)))
-                                                 (pathToMe
-                                                      (fromJust (lastChild x)))))
-                                       (fromJust (lastChild x))))
+                                            ((fromMaybe (error "5") . lastChild)
+                                                 (followThePath
+                                                      (tree
+                                                           (root
+                                                                (applyRule
+                                                                     (snd y)
+                                                                     n)))
+                                                      (pathToMe x))))
+                                       (Data.Tree.Zipper.last (children x))))
                      cs0 =
                          insertAndMoveToChild tp (Just (s0, ""), Just (s1, ""))
                      cs1 =
@@ -220,7 +232,12 @@ insertAndMoveToChild
 insertAndMoveToChild tp (l,r) =
     if not (isLeaf tp)
         then error "Can only insert a new element at a leaf of the tree."
-        else (fromJust (firstChild newTp), fromJust (lastChild newTp))
+        else ( if isJust l
+                   then fromMaybe (error "7") (firstChild newTp)
+                   else newTp
+             , if isJust r
+                   then fromMaybe (error "8") (lastChild newTp)
+                   else newTp)
   where
     newTp =
         modifyTree
@@ -250,7 +267,15 @@ getInstanceCandidates node graph =
         (\x ->
               snd x /= "instance" &&
               (getVarNum (fst node) >= getVarNum (fst x) ||
-               (isFunctionSymbolRecursive (nodeHead node) &&
+               ((\x ->
+                      case x of
+                          (Right _) -> True
+                          _ -> False)
+                    (Data.Rewriting.Term.root
+                         ((\(((t:_,_,_):_,_),_) ->
+                                t)
+                              node)) &&
+                isFunctionSymbolRecursive (nodeHead node) &&
                 branchingFactor (nodeHead node) > maxBranchingFactor)))
         (toList graph)
 
@@ -271,6 +296,11 @@ isClauseRecursive :: Clause -> Bool
 isClauseRecursive (_,Just b) =
     any
         (\x ->
+              (\x ->
+                    case x of
+                        (Right _) -> True
+                        _ -> False)
+                  (Data.Rewriting.Term.root x) &&
               isFunctionSymbolRecursive
                   (Fun (fromRight (Data.Rewriting.Term.root x)) []))
         (getMetaPredicates b)
@@ -448,7 +478,8 @@ tryToApplyInstanceRule ((qs,_,_):_,(g,u)) =
                      (nub
                           (concatMap
                                (map Var . vars . apply (fromJust (head mu)))
-                               g')) && null (map (fmap (apply (fromJust (head mu)))) u' \\ u))
+                               g')) &&
+                 null (map (fmap (apply (fromJust (head mu)))) u' \\ u))
 
 bTreeToRoseTree :: BTree a -> Tree a
 bTreeToRoseTree (BNode e Empty Empty) = Node e []
