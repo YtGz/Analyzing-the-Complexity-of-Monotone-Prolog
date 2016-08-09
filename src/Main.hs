@@ -89,11 +89,19 @@ import           Data.Map
       let o = getInitialAbstractState (head (getQueryClasses exprs)) in
         printSymbolicEvaluationGraph (applyRules o)-}
 
+main = do
+      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
+      let o = getInitialAbstractState (head (getQueryClasses exprs)) in
+        printSymbolicEvaluationGraph (generateSymbolicEvaluationGraph o)
+
+-- main = print (isFunctionSymbolRecursive (Fun "mult" []) 2) --True
+-- main = print (isFunctionSymbolRecursive (Fun "add" []) 2) --False
+
 --main = print (showTerm' (Fun "add" [Fun "Left 0" [], Fun "s" [Fun "Left 0" []]]))
 
 -- main = print (show (freshVariable (Var "")) ++ show (freshVariable (Var ""))) -- the two fresh variables should be distinct
 
-main = print (isFunctionSymbolRecursive (Fun "q" []))
+--main = print (isFunctionSymbolRecursive (Fun "q" []))
 
 --main = printArrayLineByLine (getMetaPredicates (Fun "," [Var "p", Fun ";" [Fun "f" [Fun "," [Var "r", Var "r"]], Var "q"]]))
 

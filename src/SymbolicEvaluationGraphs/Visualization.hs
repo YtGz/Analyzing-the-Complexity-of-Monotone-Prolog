@@ -17,6 +17,7 @@ import Diagrams.Backend.SVG.CmdLine
 import Diagrams.TwoD.Layout.Tree
 import Graphics.SVGFonts
 
+--TODO: draw dashed arrows to instance father for instance rule
 printSymbolicEvaluationGraph :: BTree (AbstractState, String) -> IO ()
 printSymbolicEvaluationGraph t =
     mainWith

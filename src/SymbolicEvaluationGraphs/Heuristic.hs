@@ -155,7 +155,7 @@ applyRule tp n =
                                                                  ( fromJust
                                                                        inst
                                                                  , "")
-                                                           , Nothing))) {-TODO: terminate here-}
+                                                           , Nothing)))
                                         else Nothing
                              _ -> Nothing
                      b0 x y =
@@ -237,22 +237,6 @@ applyRule tp n =
                                        (Just (caseRule s, ""), Nothing)))
                              (n + 1)
 
-{-applyRule s@(([],_,_):_,_) n = BNode (s, "suc") (applyRule (suc s) n) Empty
-applyRule s@((_,_,Nothing):_,_) n =
-    BNode (s, "case") (applyRule (caseRule s) (n+1)) Empty
-applyRule s n =
-    if isBacktrackingApplicable s
-        then BNode (s, "backtrack") (applyRule (backtrack s) n) Empty
-        else if n >= minExSteps && (case s of ((t:_,_,Nothing):_,_) -> isFunctionSymbolRecursive (Fun (fromRight (root t)) [])
-                                              ((_:_,_,Just clause):_,_) -> isClauseRecursive clause) then fromMaybe (case s of (([_],_,_):_,_) -> e
-                                                                                                                               _ -> split s) i else e
-  where
-    ss = eval s
-    s1 = fst ss
-    s2 = snd ss
-    i = case s of ((t:_,_,Nothing):_,_) ->  BNode (s, "instance") (applyRule (tryToApplyInstanceRule s (getInstanceCandidates (BNode s Empty Empty) g{-TODO add current graph to args (-> use zippers?)-})) n) Empty --TODO: terminate here
-                  _ -> Nothing
-    e = BNode (s, "eval") (applyRule s1 n) (applyRule s2 n)-}
 insertAndMoveToChild
     :: TreePos Full (AbstractState, String)
     -> (Maybe (AbstractState, String), Maybe (AbstractState, String))

@@ -185,7 +185,7 @@ instance Implicit_ [Clause] where
 readPrologFile :: IO [Clause]
 readPrologFile = do
   as <- getArgs
-  (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\recursive_function_symbol_example.pl" --(head as)
+  (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl" --(head as)
   let queries = map (termToClause . exprToTerm) (filter (not . isQuery) exprs) in
     if hasNoAbstractVariables queries
       then return queries

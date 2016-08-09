@@ -222,9 +222,11 @@ tryToApplyInstanceRule ((qs,_,_):_,(g,u)) =
                      (nub g)
                      (nub
                           (concatMap
-                               (map Var . Data.Rewriting.Term.vars . apply (fromJust (head mu)))
+                               (map Var .
+                                Data.Rewriting.Term.vars .
+                                apply (fromJust (head mu)))
                                g')) &&
                  null (map (fmap (apply (fromJust (head mu)))) u' \\ u))
 
 parallel :: AbstractState -> (AbstractState, AbstractState)
-parallel (ss, kb) = (([head ss], kb), (tail ss, kb)) 
+parallel (ss,kb) = (([head ss], kb), (tail ss, kb))

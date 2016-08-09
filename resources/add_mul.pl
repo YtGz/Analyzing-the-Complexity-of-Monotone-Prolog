@@ -4,4 +4,5 @@ add(s(Z),X) :- s(add(Z,X)).
 mult(0,X) :- 0.
 mult(s(Z),X) :- add(X,mult(Z,X)).
 
-:- add(X,s(0)).
+% :- add(X,s(0)).
+:- mult(s(0),X).
