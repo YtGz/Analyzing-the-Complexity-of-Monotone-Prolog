@@ -420,7 +420,7 @@ isFunctionSymbolRecursive (Fun f _) arity =
       , "writeq"]) &&
      any
          (\x ->
-               isFunctionSymbolRecursiveHelper
+               isFunctionSymbolRecursive_
                    f
                    [Data.Rewriting.Term.root (fst x)]
                    x)
@@ -440,10 +440,10 @@ isFunctionSymbolRecursive (Fun f _) arity =
                    param_)))
 isFunctionSymbolRecursive _ _ = error "No function symbol provided."
 
-isFunctionSymbolRecursiveHelper
+isFunctionSymbolRecursive_
     :: Implicit_ [Clause]
     => String -> [Either String String] -> Clause -> Bool
-isFunctionSymbolRecursiveHelper f hrs c =
+isFunctionSymbolRecursive_ f hrs c =
     let his =
             mapMaybe
                 (\(x,y) ->
@@ -467,7 +467,7 @@ isFunctionSymbolRecursiveHelper f hrs c =
              his ||
          any
              (\x ->
-                   isFunctionSymbolRecursiveHelper
+                   isFunctionSymbolRecursive_
                        f
                        (Data.Rewriting.Term.root (fst x) : hrs)
                        x)

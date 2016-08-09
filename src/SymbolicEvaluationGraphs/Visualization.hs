@@ -5,11 +5,12 @@ import Data.Rewriting.Term.Type (Term(..))
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities (splitClauseBody)
 import SymbolicEvaluationGraphs.Heuristic (getInstanceCandidates)
-import Data.Rewriting.Substitution (unify)
+import Data.Rewriting.Substitution (unify, apply)
 import Data.Rewriting.Substitution.Type (toMap)
+import Data.Rewriting.Term (vars)
 import Data.Map (toList)
 import Data.Maybe
-import Data.List (nubBy)
+import Data.List (nubBy, nub, (\\))
 import Data.Function (on)
 import Data.String.Utils
 import Diagrams.Prelude
@@ -18,7 +19,8 @@ import Diagrams.TwoD.Layout.Tree
 import Graphics.SVGFonts
 
 --TODO: draw dashed arrows to instance father for instance rule
-printSymbolicEvaluationGraph :: BTree (AbstractState, String) -> IO ()
+printSymbolicEvaluationGraph
+    :: BTree (AbstractState, String) -> IO ()
 printSymbolicEvaluationGraph t =
     mainWith
         ((renderTree'
@@ -26,11 +28,13 @@ printSymbolicEvaluationGraph t =
               (\((n,s),p1) (_,p2) ->
                     let rule = write (snd s)
                         additionToU =
-                            if snd s == "eval" && fst (unp2 p2) >= fst (unp2 p1)
+                            if snd s == "eval" && fst (unp2 p2) >=
+                               fst (unp2 p1)
                                 then write (getAdditionToU (fst s))
                                 else write ""
-                        mu = if snd s == "instance"
-                                then write ""--(getInstanceSub s t)
+                        mu =
+                            if snd s == "instance"
+                                then write (getInstanceSub s t)
                                 else write ""
                         annotationToTheRight = additionToU `atop` mu
                     in rule #
@@ -42,7 +46,11 @@ printSymbolicEvaluationGraph t =
                        translate
                            (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
                             (negated
-                                 (V2 (fst (fromJust (extentX annotationToTheRight))) 0) #
+                                 (V2
+                                      (fst
+                                           (fromJust
+                                                (extentX annotationToTheRight)))
+                                      0) #
                              scale 1.2)) `atop`
                        p1 ~~
                        p2)
@@ -77,17 +85,55 @@ getAdditionToU ((t:_,_,Just (h,_)):_,_) = showTerm' t ++ " !~ " ++ showTerm' h
 getAdditionToU s = error "Malformed abstract state."
 
 -- returns the substitution used when applying the instance rule
-{-getInstanceSub :: (AbstractState, String) -> BTree (AbstractState, String) -> String
-getInstanceSub n g = showSubst' (fromJust (getFirst . mconcat . map First $ (map (f n) (getInstanceCandidates n g))))
+getInstanceSub
+    :: (AbstractState, String) -> BTree (AbstractState, String) -> String
+getInstanceSub n g =
+    maybe "" showSubst' (getInstanceSub_ n (getInstanceCandidates n g))
 
+getInstanceSub_ :: (AbstractState, String)
+                -> [(AbstractState, String)]
+                -> Maybe Subst'
+getInstanceSub_ _ [] = Nothing
+getInstanceSub_ n (x:xs) =
+    let qs =
+            let ss = fst (fst n)
+            in case ss of
+                   [] -> []
+                   _ ->
+                       (\(x,_,_) ->
+                             x)
+                           (head ss)
+        qs' =
+          let ss = fst (fst x)
+          in case ss of
+                 [] -> []
+                 _ ->
+                     (\(x,_,_) ->
+                           x)
+                         (head ss)
+    in if length qs == length qs'
+           then let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
+                in if length mu == 1 && isJust (head mu) &&
+                      (\xs ys ->
+                            null (xs \\ ys) && null (ys \\ xs))
+                          (nub (fst (snd (fst n))))
+                          (nub
+                               (concatMap
+                                    (map Var . Data.Rewriting.Term.vars .
+                                     Data.Rewriting.Substitution.apply
+                                         (fromJust (head mu)))
+                                    (fst (snd (fst x))))) &&
+                      null
+                          (map
+                               (fmap
+                                    (Data.Rewriting.Substitution.apply
+                                         (fromJust (head mu))))
+                               (snd (snd (fst x))) \\
+                           snd (snd (fst n)))
+                       then head mu
+                       else getInstanceSub_ n xs
+           else getInstanceSub_ n xs
 
-f :: (AbstractState, String) -> (AbstractState, String) -> Maybe Subst'
-f n x = let qs = (\(x,_,_) -> x) (head (fst (fst n)))
-            qs' = (\(x,_,_) -> x) (head (fst (fst x)))
-            mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs) in
-            if length qs == length qs' && length mu == 1 && isJust (head mu)
-              then head mu else Nothing
--}
 printAbstractState :: AbstractState -> QDiagram B V2 Double Any
 printAbstractState ([],_) = write "e"
 printAbstractState (gs,(g,u)) =
