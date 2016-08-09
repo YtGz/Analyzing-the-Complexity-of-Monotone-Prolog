@@ -4,9 +4,9 @@ module SymbolicEvaluationGraphs.Heuristic where
 
 import Data.Implicit
 import Data.Foldable (toList)
-import Data.Function (on)
 import Data.Maybe
 import Data.List (find, nubBy, nub, (\\))
+import Control.Arrow ((***))
 import Data.Either.Utils
 import Data.Tree.Zipper
 import ExprToTerm.Conversion
@@ -16,10 +16,11 @@ import Data.Rewriting.Substitution (unify, apply)
 import Data.Rewriting.Substitution.Type (toMap, fromMap)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
-       (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split)
+       (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
+        tryToApplyInstanceRule, parallel, unify', arityOfRootSymbol)
 import Data.Tree
 import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
-import qualified Data.Rewriting.Term (vars, root)
+import qualified Data.Rewriting.Term (root)
 
 minExSteps :: Int
 minExSteps = 1
@@ -79,18 +80,12 @@ applyRule tp n =
                                   tp)
                              (Just (suc s, ""), Nothing)))
                    n
-           ((_,_,Nothing):_,_) ->
-               applyRule
-                   (fst
-                        (insertAndMoveToChild
-                             (modifyLabel
-                                  (\(x,_) ->
-                                        (x, "case"))
-                                  tp)
-                             (Just (caseRule s, ""), Nothing)))
-                   (n + 1)
            _
-             | isBacktrackingApplicable s ->
+             | isJust
+                  ((\(_,_,x) ->
+                         x)
+                       (head (fst s))) &&
+                   isBacktrackingApplicable s ->
                  applyRule
                      (fst
                           (insertAndMoveToChild
@@ -112,19 +107,29 @@ applyRule tp n =
                                 (Fun
                                      (fromRight (Data.Rewriting.Term.root t))
                                      [])
+                                (arityOfRootSymbol t)
                         ((_:_,_,Just clause):_,_) -> isClauseRecursive clause) ->
-                 fromMaybe
-                     (case s of
-                          (([_],_,_):_,_) -> e
-                          _ -> sp)
-                     i
-             | otherwise -> e
+                 if length (fst s) > 1
+                     then par
+                     else fromMaybe
+                              (case s of
+                                   (([_],_,Nothing):_,_) -> c
+                                   (([_],_,_):_,_) -> e
+                                   _ -> sp)
+                              i
+             | otherwise ->
+                 case s of
+                     ((_,_,Nothing):_,_) -> c
+                     _ -> e
                where ss = eval s
                      s0 = fst ss
                      s1 = snd ss
                      sps = split s
                      sp0 = fst sps
                      sp1 = snd sps
+                     pars = parallel s
+                     par0 = fst pars
+                     par1 = snd pars
                      i =
                          case s of
                              ((t:_,_,Nothing):_,_) ->
@@ -190,6 +195,10 @@ applyRule tp n =
                          insertAndMoveToChild
                              tp
                              (Just (sp0, ""), Just (sp1, ""))
+                     cs2 =
+                         insertAndMoveToChild
+                             tp
+                             (Just (par0, ""), Just (par1, ""))
                      e =
                          b1
                              (b0
@@ -208,6 +217,25 @@ applyRule tp n =
                                        tp)
                                   cs1)
                              cs1
+                     par =
+                         b1
+                             (b0
+                                  (modifyLabel
+                                       (\(x,_) ->
+                                             (x, "parallel"))
+                                       tp)
+                                  cs2)
+                             cs2
+                     c =
+                         applyRule
+                             (fst
+                                  (insertAndMoveToChild
+                                       (modifyLabel
+                                            (\(x,_) ->
+                                                  (x, "case"))
+                                            tp)
+                                       (Just (caseRule s, ""), Nothing)))
+                             (n + 1)
 
 {-applyRule s@(([],_,_):_,_) n = BNode (s, "suc") (applyRule (suc s) n) Empty
 applyRule s@((_,_,Nothing):_,_) n =
@@ -275,7 +303,12 @@ getInstanceCandidates node graph =
                          ((\(((t:_,_,_):_,_),_) ->
                                 t)
                               node)) &&
-                isFunctionSymbolRecursive (nodeHead node) &&
+                isFunctionSymbolRecursive
+                    (nodeHead node)
+                    (arityOfRootSymbol
+                         ((\(((t:_,_,Nothing):_,_),_) ->
+                                t)
+                              node)) &&
                 branchingFactor (nodeHead node) > maxBranchingFactor)))
         (toList graph)
 
@@ -302,13 +335,14 @@ isClauseRecursive (_,Just b) =
                         _ -> False)
                   (Data.Rewriting.Term.root x) &&
               isFunctionSymbolRecursive
-                  (Fun (fromRight (Data.Rewriting.Term.root x)) []))
-        (getMetaPredicates b)
+                  (Fun (fromRight (Data.Rewriting.Term.root x)) [])
+                  (arityOfRootSymbol x))
+        (getMetaPredications b)
 
 isFunctionSymbolRecursive
     :: Implicit_ [Clause]
-    => Term' -> Bool
-isFunctionSymbolRecursive (Fun f _) =
+    => Term' -> Int -> Bool
+isFunctionSymbolRecursive (Fun f _) arity =
     f == "repeat" ||
     ((f `notElem`
       [ "abolish"
@@ -406,24 +440,41 @@ isFunctionSymbolRecursive (Fun f _) =
                    f
                    [Data.Rewriting.Term.root (fst x)]
                    x)
-         (filter
+         (mapMaybe
               (\x ->
-                    Right f == Data.Rewriting.Term.root (fst x))
-              param_))
-isFunctionSymbolRecursive _ = error "No function symbol provided."
+                    let startF = Fun f (map (Var . show) (take arity [1,2 ..]))
+                        sub = unify' startF (fst x)
+                    in if isJust sub
+                           then Just
+                                    ((apply (fromJust sub) ***
+                                      fmap (apply (fromJust sub)))
+                                         x)
+                           else Nothing)
+              (filter
+                   (\x ->
+                         Right f == Data.Rewriting.Term.root (fst x))
+                   param_)))
+isFunctionSymbolRecursive _ _ = error "No function symbol provided."
 
 isFunctionSymbolRecursiveHelper
     :: Implicit_ [Clause]
     => String -> [Either String String] -> Clause -> Bool
 isFunctionSymbolRecursiveHelper f hrs c =
     let his =
-            map
-                snd
+            mapMaybe
+                (\(x,y) ->
+                      let sub = unify' x (fst y)
+                      in if isJust sub
+                             then Just
+                                      ((apply (fromJust sub) ***
+                                        fmap (apply (fromJust sub)))
+                                           y)
+                             else Nothing)
                 (filter
                      (\(x,y) ->
                            Data.Rewriting.Term.root x ==
                            Data.Rewriting.Term.root (fst y))
-                     (maybe [] getMetaPredicates (snd c) `cartesianProduct`
+                     (maybe [] getMetaPredications (snd c) `cartesianProduct`
                       param_))
     in (not (null his) &&
         (any
@@ -444,13 +495,13 @@ cartesianProduct xs ys =
     | x <- xs
     , y <- ys ]
 
-getMetaPredicates :: Term' -> [Term']
-getMetaPredicates t@(Fun f args) =
+getMetaPredications :: Term' -> [Term']
+getMetaPredications t@(Fun f args) =
     t :
     if f `elem` [",", ";", "->", "call", "\\+", "once"]
-        then concatMap getMetaPredicates args
+        then concatMap getMetaPredications args
         else []
-getMetaPredicates v = [v]
+getMetaPredications v = [v]
 
 branchingFactor
     :: Implicit_ [Clause]
@@ -461,25 +512,6 @@ branchingFactor (Fun f _) =
              (== Right f)
              (map (Data.Rewriting.Term.root . fst) (param_ :: [Clause])))
 branchingFactor _ = error "No function symbol provided."
-
-tryToApplyInstanceRule :: AbstractState
-                       -> [AbstractState]
-                       -> Maybe AbstractState
-tryToApplyInstanceRule ((qs,_,_):_,(g,u)) =
-    find
-        (\((qs',_,_):_,(g',u')) ->
-              length qs == length qs' &&
-              let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
-              in length mu == 1 &&
-                 isJust (head mu) &&
-                 (\xs ys ->
-                       null (xs \\ ys) && null (ys \\ xs))
-                     (nub g)
-                     (nub
-                          (concatMap
-                               (map Var . vars . apply (fromJust (head mu)))
-                               g')) &&
-                 null (map (fmap (apply (fromJust (head mu)))) u' \\ u))
 
 bTreeToRoseTree :: BTree a -> Tree a
 bTreeToRoseTree (BNode e Empty Empty) = Node e []

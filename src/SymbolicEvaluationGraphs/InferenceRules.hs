@@ -7,6 +7,7 @@ import Data.List
 import qualified Data.Map (elems, filter, filterWithKey, fromList)
 import Control.Arrow
 import Data.Implicit
+import Data.Function (on)
 import Data.Rewriting.Substitution (apply, compose, unify)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import qualified Data.Rewriting.Term
@@ -205,3 +206,25 @@ nextG t g =
 groundnessAnalysis
     :: String -> [Int] -> [Int]
 groundnessAnalysis f groundInputs = groundInputs
+
+tryToApplyInstanceRule :: AbstractState
+                       -> [AbstractState]
+                       -> Maybe AbstractState
+tryToApplyInstanceRule ((qs,_,_):_,(g,u)) =
+    find
+        (\((qs',_,_):_,(g',u')) ->
+              length qs == length qs' &&
+              let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
+              in length mu == 1 &&
+                 isJust (head mu) &&
+                 (\xs ys ->
+                       null (xs \\ ys) && null (ys \\ xs))
+                     (nub g)
+                     (nub
+                          (concatMap
+                               (map Var . Data.Rewriting.Term.vars . apply (fromJust (head mu)))
+                               g')) &&
+                 null (map (fmap (apply (fromJust (head mu)))) u' \\ u))
+
+parallel :: AbstractState -> (AbstractState, AbstractState)
+parallel (ss, kb) = (([head ss], kb), (tail ss, kb)) 

@@ -4,9 +4,13 @@ import ExprToTerm.Conversion
 import Data.Rewriting.Term.Type (Term(..))
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities (splitClauseBody)
+import SymbolicEvaluationGraphs.Heuristic (getInstanceCandidates)
+import Data.Rewriting.Substitution (unify)
 import Data.Rewriting.Substitution.Type (toMap)
 import Data.Map (toList)
 import Data.Maybe
+import Data.List (nubBy)
+import Data.Function (on)
 import Data.String.Utils
 import Diagrams.Prelude
 import Diagrams.Backend.SVG.CmdLine
@@ -21,19 +25,23 @@ printSymbolicEvaluationGraph t =
               (\((n,s),p1) (_,p2) ->
                     let rule = write (snd s)
                         additionToU =
-                            if fst (unp2 p2) >= fst (unp2 p1)
+                            if snd s == "eval" && fst (unp2 p2) >= fst (unp2 p1)
                                 then write (getAdditionToU (fst s))
                                 else write ""
+                        mu = if snd s == "instance"
+                                then write ""--(getInstanceSub s t)
+                                else write ""
+                        annotationToTheRight = additionToU `atop` mu
                     in rule #
                        translate
                            (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
                             (negated (V2 (snd (fromJust (extentX rule))) 0) ^+^
                              unit_X)) `atop`
-                       additionToU #
+                       annotationToTheRight #
                        translate
                            (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
                             (negated
-                                 (V2 (fst (fromJust (extentX additionToU))) 0) #
+                                 (V2 (fst (fromJust (extentX annotationToTheRight))) 0) #
                              scale 1.2)) `atop`
                        p1 ~~
                        p2)
@@ -67,6 +75,18 @@ getAdditionToU :: AbstractState -> String
 getAdditionToU ((t:_,_,Just (h,_)):_,_) = showTerm' t ++ " !~ " ++ showTerm' h
 getAdditionToU s = error "Malformed abstract state."
 
+-- returns the substitution used when applying the instance rule
+{-getInstanceSub :: (AbstractState, String) -> BTree (AbstractState, String) -> String
+getInstanceSub n g = showSubst' (fromJust (getFirst . mconcat . map First $ (map (f n) (getInstanceCandidates n g))))
+
+
+f :: (AbstractState, String) -> (AbstractState, String) -> Maybe Subst'
+f n x = let qs = (\(x,_,_) -> x) (head (fst (fst n)))
+            qs' = (\(x,_,_) -> x) (head (fst (fst x)))
+            mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs) in
+            if length qs == length qs' && length mu == 1 && isJust (head mu)
+              then head mu else Nothing
+-}
 printAbstractState :: AbstractState -> QDiagram B V2 Double Any
 printAbstractState ([],_) = write "e"
 printAbstractState (gs,(g,u)) =
