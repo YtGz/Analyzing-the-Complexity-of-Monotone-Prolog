@@ -7,6 +7,7 @@ import Data.Foldable (toList)
 import Data.Maybe
 import Data.List (find, nubBy, nub, (\\))
 import Control.Arrow ((***))
+import Control.Monad (join)
 import Data.Either.Utils
 import Data.Tree.Zipper
 import ExprToTerm.Conversion
@@ -29,10 +30,10 @@ maxBranchingFactor :: Int
 maxBranchingFactor = 4
 
 generateSymbolicEvaluationGraph :: AbstractState
-                                -> BTree (AbstractState, String)
-generateSymbolicEvaluationGraph initialState =
-    roseTreeToBTree
-        (toTree (applyRule (fromTree (Node (initialState, "") [])) 0))
+                                -> IO (BTree (AbstractState, String))
+generateSymbolicEvaluationGraph initialState = do
+    tp <- applyRule (return (fromTree (Node (initialState, "") []))) 0
+    return (roseTreeToBTree (toTree tp))
 
 type TreePath a = [TreePos Full a -> TreePos Full a]
 
@@ -56,187 +57,187 @@ followThePath :: Tree a -> TreePath a -> TreePos Full a
 followThePath t = foldr ($) (fromTree t)
 
 applyRule
-    :: TreePos Full (AbstractState, String)
+    :: IO (TreePos Full (AbstractState, String))
     -> Int
-    -> TreePos Full (AbstractState, String)
-applyRule tp n =
+    -> IO (TreePos Full (AbstractState, String))
+applyRule ioTp n = do
+    tp <- ioTp
     let s = fst (label tp)
-    in case s of
-           ([],_) ->
-               fst
-                   (insertAndMoveToChild
-                        (modifyLabel
-                             (\(x,_) ->
-                                   (x, ""))
-                             tp)
-                        (Nothing, Nothing))
-           (([],_,_):_,_) ->
-               applyRule
-                   (fst
-                        (insertAndMoveToChild
-                             (modifyLabel
-                                  (\(x,_) ->
-                                        (x, "suc"))
-                                  tp)
-                             (Just (suc s, ""), Nothing)))
-                   n
-           _
-             | isJust
-                  ((\(_,_,x) ->
-                         x)
-                       (head (fst s))) &&
-                   isBacktrackingApplicable s ->
-                 applyRule
+    let ss = eval s
+        s0 = fst ss
+        s1 = snd ss
+        sp0 = do
+              sps <- split s
+              return (fst sps)
+        sp1 = do
+              sps <- split s
+              return (snd sps)
+        pars = parallel s
+        par0 = fst pars
+        par1 = snd pars
+        i =
+            case s of
+                ((t:_,_,Nothing):_,_) ->
+                    let newTp =
+                            modifyLabel
+                                (\(x,_) ->
+                                      (x, "instance"))
+                                tp
+                        inst =
+                            tryToApplyInstanceRule
+                                s
+                                (map
+                                     fst
+                                     (getInstanceCandidates
+                                          (label tp)
+                                          (roseTreeToBTree (toTree newTp))))
+                    in if isJust inst
+                           then Just
+                                    (return
+                                         (fst
+                                              (insertAndMoveToChild
+                                                   newTp
+                                                   ( Just (fromJust inst, "")
+                                                   , Nothing))))
+                           else Nothing
+                _ -> Nothing
+        b0 x' y = do
+            x <- x'
+            nT <- applyRule (return (fst y)) n
+            return
+                (fromMaybe
+                     (error "1")
+                     (parent
+                          (insert
+                               (tree
+                                    ((fromMaybe (error "2") . firstChild)
+                                         (followThePath
+                                              (tree (root nT))
+                                              (pathToMe x))))
+                               (first (children x)))))
+        b1 x' y = do
+            x <- x'
+            nT <- applyRule (return (snd y)) n
+            return
+                (fromMaybe
+                     (error "4")
+                     (parent
+                          (insert
+                               (tree
+                                    ((fromMaybe (error "5") . lastChild)
+                                         (followThePath
+                                              (tree (root nT))
+                                              (pathToMe x))))
+                               (Data.Tree.Zipper.last (children x)))))
+        cs0 = insertAndMoveToChild tp (Just (s0, ""), Just (s1, ""))
+        cs1 = do
+          sp0' <- sp0
+          sp1' <- sp1
+          return (insertAndMoveToChild tp (Just (sp0', ""), Just (sp1', "")))
+        cs2 = insertAndMoveToChild tp (Just (par0, ""), Just (par1, ""))
+        e =
+            b1
+                (b0
+                     (return
+                          (modifyLabel
+                               (\(x,_) ->
+                                     (x, "eval"))
+                               tp))
+                     cs0)
+                cs0
+        sp = do
+            cs1' <- cs1
+            return (b1
+                (b0
+                     (return
+                          (modifyLabel
+                               (\(x,_) ->
+                                     (x, "split"))
+                               tp))
+                     cs1')
+                cs1')
+        par =
+            b1
+                (b0
+                     (return
+                          (modifyLabel
+                               (\(x,_) ->
+                                     (x, "parallel"))
+                               tp))
+                     cs2)
+                cs2
+        c =
+            applyRule
+                (return
                      (fst
                           (insertAndMoveToChild
                                (modifyLabel
                                     (\(x,_) ->
-                                          (x, "backtrack"))
+                                          (x, "case"))
                                     tp)
-                               (Just (backtrack s, ""), Nothing)))
-                     n
-             | n >= minExSteps &&
-                   (case s of
-                        ((t:_,_,Nothing):_,_) ->
-                            (\x ->
-                                  case x of
-                                      (Right _) -> True
-                                      _ -> False)
-                                (Data.Rewriting.Term.root t) &&
-                            isFunctionSymbolRecursive
-                                (Fun
-                                     (fromRight (Data.Rewriting.Term.root t))
-                                     [])
-                                (arityOfRootSymbol t)
-                        ((_:_,_,Just clause):_,_) -> isClauseRecursive clause) ->
-                 if length (fst s) > 1
-                     then par
-                     else fromMaybe
-                              (case s of
-                                   (([_],_,Nothing):_,_) -> c
-                                   (([_],_,_):_,_) -> e
-                                   _ -> sp)
-                              i
-             | otherwise ->
-                 case s of
-                     ((_,_,Nothing):_,_) -> c
-                     _ -> e
-               where ss = eval s
-                     s0 = fst ss
-                     s1 = snd ss
-                     sps = split s
-                     sp0 = fst sps
-                     sp1 = snd sps
-                     pars = parallel s
-                     par0 = fst pars
-                     par1 = snd pars
-                     i =
-                         case s of
-                             ((t:_,_,Nothing):_,_) ->
-                                 let newTp =
-                                         modifyLabel
-                                             (\(x,_) ->
-                                                   (x, "instance"))
-                                             tp
-                                     inst =
-                                         tryToApplyInstanceRule
-                                             s
-                                             (map
-                                                  fst
-                                                  (getInstanceCandidates
-                                                       (label tp)
-                                                       (roseTreeToBTree
-                                                            (toTree newTp))))
-                                 in if isJust inst
-                                        then Just
-                                                 (fst
-                                                      (insertAndMoveToChild
-                                                           newTp
-                                                           ( Just
-                                                                 ( fromJust
-                                                                       inst
-                                                                 , "")
-                                                           , Nothing)))
-                                        else Nothing
-                             _ -> Nothing
-                     b0 x y =
-                         fromMaybe
-                             (error "1")
-                             (parent
-                                  (insert
-                                       (tree
-                                            ((fromMaybe (error "2") .
-                                              firstChild)
-                                                 (followThePath
-                                                      (tree
-                                                           (root
-                                                                (applyRule
-                                                                     (fst y)
-                                                                     n)))
-                                                      (pathToMe x))))
-                                       (first (children x))))
-                     b1 x y =
-                         fromMaybe
-                             (error "4")
-                             (parent
-                                  (insert
-                                       (tree
-                                            ((fromMaybe (error "5") . lastChild)
-                                                 (followThePath
-                                                      (tree
-                                                           (root
-                                                                (applyRule
-                                                                     (snd y)
-                                                                     n)))
-                                                      (pathToMe x))))
-                                       (Data.Tree.Zipper.last (children x))))
-                     cs0 =
-                         insertAndMoveToChild tp (Just (s0, ""), Just (s1, ""))
-                     cs1 =
-                         insertAndMoveToChild
-                             tp
-                             (Just (sp0, ""), Just (sp1, ""))
-                     cs2 =
-                         insertAndMoveToChild
-                             tp
-                             (Just (par0, ""), Just (par1, ""))
-                     e =
-                         b1
-                             (b0
-                                  (modifyLabel
-                                       (\(x,_) ->
-                                             (x, "eval"))
-                                       tp)
-                                  cs0)
-                             cs0
-                     sp =
-                         b1
-                             (b0
-                                  (modifyLabel
-                                       (\(x,_) ->
-                                             (x, "split"))
-                                       tp)
-                                  cs1)
-                             cs1
-                     par =
-                         b1
-                             (b0
-                                  (modifyLabel
-                                       (\(x,_) ->
-                                             (x, "parallel"))
-                                       tp)
-                                  cs2)
-                             cs2
-                     c =
-                         applyRule
-                             (fst
-                                  (insertAndMoveToChild
-                                       (modifyLabel
-                                            (\(x,_) ->
-                                                  (x, "case"))
-                                            tp)
-                                       (Just (caseRule s, ""), Nothing)))
-                             (n + 1)
+                               (Just (caseRule s, ""), Nothing))))
+                (n + 1)
+    case s of
+        ([],_) ->
+            return
+                (fst
+                     (insertAndMoveToChild
+                          (modifyLabel
+                               (\(x,_) ->
+                                     (x, ""))
+                               tp)
+                          (Nothing, Nothing)))
+        (([],_,_):_,_) ->
+            applyRule
+                (return
+                     (fst
+                          (insertAndMoveToChild
+                               (modifyLabel
+                                    (\(x,_) ->
+                                          (x, "suc"))
+                                    tp)
+                               (Just (suc s, ""), Nothing))))
+                n
+        _
+          | isJust
+               ((\(_,_,x) ->
+                      x)
+                    (head (fst s))) &&
+                isBacktrackingApplicable s ->
+              applyRule
+                  (return
+                       (fst
+                            (insertAndMoveToChild
+                                 (modifyLabel
+                                      (\(x,_) ->
+                                            (x, "backtrack"))
+                                      tp)
+                                 (Just (backtrack s, ""), Nothing))))
+                  n
+          | n >= minExSteps &&
+                (case s of
+                     ((t:_,_,Nothing):_,_) ->
+                         (\x ->
+                               case x of
+                                   (Right _) -> True
+                                   _ -> False)
+                             (Data.Rewriting.Term.root t) &&
+                         isFunctionSymbolRecursive
+                             (Fun (fromRight (Data.Rewriting.Term.root t)) [])
+                             (arityOfRootSymbol t)
+                     ((_:_,_,Just clause):_,_) -> isClauseRecursive clause) ->
+              if length (fst s) > 1
+                  then par
+                  else fromMaybe
+                           (case s of
+                                (([_],_,Nothing):_,_) -> c
+                                (([_],_,_):_,_) -> e
+                                _ -> join sp)
+                           i
+          | otherwise ->
+              case s of
+                  ((_,_,Nothing):_,_) -> c
+                  _ -> e
 
 insertAndMoveToChild
     :: TreePos Full (AbstractState, String)

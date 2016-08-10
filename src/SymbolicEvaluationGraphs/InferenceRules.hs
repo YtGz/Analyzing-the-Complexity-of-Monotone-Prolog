@@ -10,6 +10,7 @@ import Control.Monad (join)
 import Data.Implicit
 import Data.Bifunctor (bimap)
 import Data.Function (on)
+import System.IO.Unsafe (unsafePerformIO)
 import Data.Rewriting.Substitution (apply, compose, unify)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import qualified Data.Rewriting.Term
@@ -157,10 +158,13 @@ arityOfRootSymbol (Fun _ xs) = length xs
 
 -- split rule for states with a single goal
 split
-    :: AbstractState -> (AbstractState, AbstractState)
-split ([(t:qs,sub,Nothing)],(g,u)) =
-    ( ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
-    , ([(map (apply d) qs, d, Nothing)], (g', map (apply d *** apply d) u)))
+    :: AbstractState -> IO (AbstractState, AbstractState)
+split ([(t:qs,sub,Nothing)],(g,u)) = do
+    g' <- nextG t g >>= (\x -> return (g `union` map (apply d) x))
+    return
+           ( ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
+           , ( [(map (apply d) qs, d, Nothing)]
+             , (g', map (apply d *** apply d) u)))
   where
     vs =
         map
@@ -170,34 +174,37 @@ split ([(t:qs,sub,Nothing)],(g,u)) =
                   concatMap Data.Rewriting.Term.vars qs)) \\
         g
     d = fromJust (unify (Fun "" vs) (Fun "" (map freshVariable vs)))
-    g' = g `union` map (apply d) (nextG t g)
 
-nextG :: Term' -> G -> G
-nextG t g =
-    nub
-        (concatMap
-             (\p ->
-                   map
-                       Var
-                       (Data.Rewriting.Term.vars
-                            (fromJust (Data.Rewriting.Term.subtermAt t [p]))))
-             (groundnessAnalysis (root t) gPos))
-  where
-    gPos =
-        filter
-            (\p ->
-                  map
-                      Var
-                      (nub
-                           (Data.Rewriting.Term.vars
-                                (fromJust (Data.Rewriting.Term.subtermAt t [p])))) ==
-                  g)
-            [0 .. arityOfRootSymbol t - 1]
+nextG :: Term' -> G -> IO G
+nextG t g = do
+    let gPos =
+          filter
+              (\p ->
+                    map
+                        Var
+                        (nub
+                             (Data.Rewriting.Term.vars
+                                  (fromJust (Data.Rewriting.Term.subtermAt t [p])))) ==
+                    g)
+              [0 .. arityOfRootSymbol t - 1]
+    gA <- groundnessAnalysis (root t) gPos
+    return
+        (nub
+             (concatMap
+                  (\p ->
+                        map
+                            Var
+                            (Data.Rewriting.Term.vars
+                                 (fromJust
+                                      (Data.Rewriting.Term.subtermAt t [p]))))
+                  gA))
 
--- mocking groundness analysis
+-- groundness analysis (dependent on user input)
 groundnessAnalysis
-    :: String -> [Int] -> [Int]
-groundnessAnalysis f groundInputs = groundInputs
+    :: String -> [Int] -> IO [Int]
+groundnessAnalysis f groundInputs = do
+    print (f ++ " " ++ show groundInputs)
+    readLn :: IO [Int]
 
 tryToApplyInstanceRule :: AbstractState
                        -> [AbstractState]

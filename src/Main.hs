@@ -91,8 +91,9 @@ import           Data.Map
 
 main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
-      let o = getInitialAbstractState (head (getQueryClasses exprs)) in
-        printSymbolicEvaluationGraph (generateSymbolicEvaluationGraph o)
+      let o = getInitialAbstractState (head (getQueryClasses exprs))
+      graph <- generateSymbolicEvaluationGraph o
+      printSymbolicEvaluationGraph graph
 
 {-main = print
         (tryToApplyInstanceRule_
