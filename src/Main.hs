@@ -94,6 +94,24 @@ main = do
       let o = getInitialAbstractState (head (getQueryClasses exprs)) in
         printSymbolicEvaluationGraph (generateSymbolicEvaluationGraph o)
 
+{-main = print
+        (tryToApplyInstanceRule_
+          ([([Fun "mult" [Var "T37",Fun "Left 0" []]],Subst.fromMap (Data.Map.fromList [("T0",Fun "s" [Var "T3"]),("T1",Var "T4"),("T3",Var "T5"),("T36",Var "T37"),("T37",Var "T37"),("T4",Fun "Left 0" []),("T5",Fun "s" [Var "T36"]),("X",Fun "mult" [Var "T37",Fun "Left 0" []]),("Z",Var "T36")]),Nothing)],([Var "T37"],[(Fun "mult" [Fun "s" [Fun "s" [Var "T37"]],Var "T1"],Fun "mult" [Fun "Left 0" [],Var "X"]),(Fun "mult" [Fun "s" [Var "T37"],Fun "Left 0" []],Fun "mult" [Fun "Left 0" [],Var "X"])]))
+          [([([Fun "mult" [Var "T5",Fun "Left 0" []]],Subst.fromMap (Data.Map.fromList [("T0",Fun "s" [Var "T3"]),("T1",Var "T4"),("T3",Var "T5"),("T4",Fun "Left 0" []),("T5",Var "T5"),("X",Fun "mult" [Var "T5",Fun "Left 0" []]),("Z",Var "T3")]),Nothing)],([Var "T5"],[(Fun "mult" [Fun "s" [Var "T5"],Var "T1"],Fun "mult" [Fun "Left 0" [],Var "X"])]))]
+        )-}
+
+{-main = print
+       (tryToApplyInstanceRule_
+          ([([Fun "mult" [Var "T78",Fun "Left 0" []]],Subst.fromMap (Data.Map.fromList [("T0",Fun "s" [Var "T3"]),("T1",Var "T4"),("T3",Var "T5"),("T36",Var "T37"),("T37",Fun "s" [Var "T77"]),("T4",Fun "Left 0" []),("T5",Fun "s" [Var "T36"]),("T77",Var "T78"),("T78",Var "T78"),("X",Fun "mult" [Var "T78",Fun "Left 0" []]),("Z",Var "T77")]),Nothing)],([Var "T78"],[(Fun "mult" [Fun "s" [Fun "s" [Fun "s" [Var "T78"]]],Var "T1"],Fun "mult" [Fun "Left 0" [],Var "X"]),(Fun "mult" [Fun "s" [Fun "s" [Var "T78"]],Fun "Left 0" []],Fun "mult" [Fun "Left 0" [],Var "X"]),(Fun "mult" [Fun "s" [Var "T78"],Fun "Left 0" []],Fun "mult" [Fun "Left 0" [],Var "X"])]))
+          [([([Fun "mult" [Var "T37",Fun "Left 0" []]],Subst.fromMap (Data.Map.fromList [("T0",Fun "s" [Var "T3"]),("T1",Var "T4"),("T3",Var "T5"),("T36",Var "T37"),("T37",Var "T37"),("T4",Fun "Left 0" []),("T5",Fun "s" [Var "T36"]),("X",Fun "mult" [Var "T37",Fun "Left 0" []]),("Z",Var "T36")]),Nothing)],([Var "T37"],[(Fun "mult" [Fun "s" [Fun "s" [Var "T37"]],Var "T1"],Fun "mult" [Fun "Left 0" [],Var "X"]),(Fun "mult" [Fun "s" [Var "T37"],Fun "Left 0" []],Fun "mult" [Fun "Left 0" [],Var "X"])]))]
+        )-}
+
+{-main = print
+          (tryToApplyInstanceRule
+            ([([Fun "mult" [Var "T5",Fun "Left 0" []]],Subst.fromMap (Data.Map.fromList [("T0",Fun "s" [Var "T3"]),("T1",Var "T4"),("T3",Var "T5"),("T4",Fun "Left 0" []),("T5",Var "T5"),("X",Fun "mult" [Var "T5",Fun "Left 0" []]),("Z",Var "T3")]),Nothing)],([Var "T5"],[(Fun "mult" [Fun "s" [Var "T5"],Var "T1"],Fun "mult" [Fun "Left 0" [],Var "X"])]))
+            [([([Fun "mult" [Var "T0",Var "T1"]],Subst.fromMap (Data.Map.fromList []),Nothing)],([Var "T0"],[]))]
+          )-}
+
 -- main = print (isFunctionSymbolRecursive (Fun "mult" []) 2) --True
 -- main = print (isFunctionSymbolRecursive (Fun "add" []) 2) --False
 

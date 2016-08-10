@@ -133,7 +133,12 @@ applyRule tp n =
                      i =
                          case s of
                              ((t:_,_,Nothing):_,_) ->
-                                 let inst =
+                                 let newTp =
+                                         modifyLabel
+                                             (\(x,_) ->
+                                                   (x, "instance"))
+                                             tp
+                                     inst =
                                          tryToApplyInstanceRule
                                              s
                                              (map
@@ -141,16 +146,12 @@ applyRule tp n =
                                                   (getInstanceCandidates
                                                        (label tp)
                                                        (roseTreeToBTree
-                                                            (toTree tp))))
+                                                            (toTree newTp))))
                                  in if isJust inst
                                         then Just
                                                  (fst
                                                       (insertAndMoveToChild
-                                                           (modifyLabel
-                                                                (\(x,_) ->
-                                                                      ( x
-                                                                      , "instance"))
-                                                                tp)
+                                                           newTp
                                                            ( Just
                                                                  ( fromJust
                                                                        inst

@@ -6,7 +6,9 @@ import Data.Maybe
 import Data.List
 import qualified Data.Map (elems, filter, filterWithKey, fromList)
 import Control.Arrow
+import Control.Monad (join)
 import Data.Implicit
+import Data.Bifunctor (bimap)
 import Data.Function (on)
 import Data.Rewriting.Substitution (apply, compose, unify)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
@@ -93,23 +95,13 @@ restrictSubstToG :: Subst' -> G -> Subst'
 restrictSubstToG sub g =
     fromMap
         (Data.Map.filterWithKey
-             (\k _ ->
-                   elem (Var k) g)
+             (\k v ->
+                   elem (Var k) g ||
+                   Data.Rewriting.Term.isGround v -- ground instance
+                    || {-is this correct? how else does the instance rule work if we apply sub|G and not sub to U?-}
+                   Data.Rewriting.Term.isVar v -- pure renaming
+              )
              (toMap sub))
-
-applyRules :: AbstractState -> BTree (AbstractState, String)
-applyRules s@([],_) = leaf (s, "") -- just for output (base case of recursion)
-applyRules s@(([],_,_):_,_) = BNode (s, "suc") (applyRules (suc s)) Empty
-applyRules s@((_,_,Nothing):_,_) =
-    BNode (s, "case") (applyRules (caseRule s)) Empty
-applyRules s =
-    if isBacktrackingApplicable s
-        then BNode (s, "backtrack") (applyRules (backtrack s)) Empty
-        else BNode (s, "eval") (applyRules s1) (applyRules s2)
-  where
-    ss = eval s
-    s1 = fst ss
-    s2 = snd ss
 
 -- we can use the backtrack rule if there is no concretization γ w.r.t. KB such that tγ ~ h
 isBacktrackingApplicable
@@ -210,23 +202,34 @@ groundnessAnalysis f groundInputs = groundInputs
 tryToApplyInstanceRule :: AbstractState
                        -> [AbstractState]
                        -> Maybe AbstractState
-tryToApplyInstanceRule ((qs,_,_):_,(g,u)) =
+tryToApplyInstanceRule ([(qs,_,_)],(g,u)) =
     find
-        (\((qs',_,_):_,(g',u')) ->
-              length qs == length qs' &&
-              let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
-              in length mu == 1 &&
-                 isJust (head mu) &&
-                 (\xs ys ->
-                       null (xs \\ ys) && null (ys \\ xs))
-                     (nub g)
-                     (nub
-                          (concatMap
-                               (map Var .
-                                Data.Rewriting.Term.vars .
-                                apply (fromJust (head mu)))
-                               g')) &&
-                 null (map (fmap (apply (fromJust (head mu)))) u' \\ u))
+        (\x ->
+              case x of
+                  ([],_) -> False
+                  ([(qs',_,_)],(g',u')) ->
+                      length qs == length qs' &&
+                      let mu =
+                              nubBy
+                                  ((==) `on` fmap toMap)
+                                  (zipWith unify qs' qs)
+                      in length mu == 1 &&
+                         isJust (head mu) &&
+                         (\xs ys ->
+                               null (xs \\ ys) && null (ys \\ xs))
+                             (nub g)
+                             (nub
+                                  (concatMap
+                                       (map Var .
+                                        Data.Rewriting.Term.vars .
+                                        apply (fromJust (head mu)))
+                                       g')) &&
+                         null
+                             (map
+                                  (join bimap (apply (fromJust (head mu))))
+                                  (nub u') \\
+                              nub u)
+                  _ -> False)
 
 parallel :: AbstractState -> (AbstractState, AbstractState)
 parallel (ss,kb) = (([head ss], kb), (tail ss, kb))
