@@ -7,7 +7,6 @@ import Data.Foldable (toList)
 import Data.Maybe
 import Data.List (find, nubBy, nub, (\\))
 import Control.Arrow ((***))
-import Control.Monad (join)
 import Data.Either.Utils
 import Data.Tree.Zipper
 import ExprToTerm.Conversion
@@ -68,11 +67,11 @@ applyRule ioTp n = do
         s1 = snd ss
         sps = split s
         sp0 = do
-              sps' <- sps
-              return (fst sps')
+            sps' <- sps
+            return (fst sps')
         sp1 = do
-              sps' <- sps
-              return (snd sps')
+            sps' <- sps
+            return (snd sps')
         pars = parallel s
         par0 = fst pars
         par1 = snd pars
@@ -115,9 +114,8 @@ applyRule ioTp n = do
                                               (tree (root nT))
                                               (pathToMe x))))
                                (first (children x)))))
-        b1 x' y = do
-            x <- x'
-            nT <- applyRule (return (snd y)) n
+        b1 x y = do
+            nT <- applyRule (return y) n
             return
                 (fromJust
                      (parent
@@ -130,41 +128,44 @@ applyRule ioTp n = do
                                (Data.Tree.Zipper.last (children x)))))
         cs0 = insertAndMoveToChild tp (Just (s0, ""), Just (s1, ""))
         cs1 = do
-          sp0' <- sp0
-          sp1' <- sp1
-          return (insertAndMoveToChild tp (Just (sp0', ""), Just (sp1', "")))
+            sp0' <- sp0
+            sp1' <- sp1
+            return (insertAndMoveToChild tp (Just (sp0', ""), Just (sp1', "")))
         cs2 = insertAndMoveToChild tp (Just (par0, ""), Just (par1, ""))
-        e =
-            b1
-                (b0
-                     (return
-                          (modifyLabel
-                               (\(x,_) ->
-                                     (x, "eval"))
-                               tp))
-                     cs0)
-                cs0
+        e = do
+            l <-
+                b0
+                    (return
+                         (modifyLabel
+                              (\(x,_) ->
+                                    (x, "eval"))
+                              tp))
+                    cs0
+            let tp = insert (tree (snd cs0)) (Data.Tree.Zipper.last (children l))
+            b1 l tp
         sp = do
             cs1' <- cs1
-            return (b1
-                (b0
-                     (return
-                          (modifyLabel
-                               (\(x,_) ->
-                                     (x, "split"))
-                               tp))
-                     cs1')
-                cs1')
-        par =
-            b1
-                (b0
-                     (return
-                          (modifyLabel
-                               (\(x,_) ->
-                                     (x, "parallel"))
-                               tp))
-                     cs2)
-                cs2
+            l <-
+                b0
+                    (return
+                         (modifyLabel
+                              (\(x,_) ->
+                                    (x, "split"))
+                              tp))
+                    cs1'
+            let tp = insert (tree (snd cs1')) (Data.Tree.Zipper.last (children l))
+            b1 l tp
+        par = do
+            l <-
+                b0
+                    (return
+                         (modifyLabel
+                              (\(x,_) ->
+                                    (x, "parallel"))
+                              tp))
+                    cs2
+            let tp = insert (tree (snd cs2)) (Data.Tree.Zipper.last (children l))
+            b1 l tp
         c =
             applyRule
                 (return
@@ -231,7 +232,7 @@ applyRule ioTp n = do
                            (case s of
                                 (([_],_,Nothing):_,_) -> c
                                 (([_],_,_):_,_) -> e
-                                _ -> join sp)
+                                _ -> sp)
                            i
           | otherwise ->
               case s of

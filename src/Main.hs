@@ -90,10 +90,9 @@ import           Data.Map
         printSymbolicEvaluationGraph (applyRules o)-}
 
 main = do
-      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
+      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example18.pl"
       let o = getInitialAbstractState (head (getQueryClasses exprs))
-      graph <- generateSymbolicEvaluationGraph o
-      printSymbolicEvaluationGraph graph
+      generateSymbolicEvaluationGraph o
 
 {-main = print
         (tryToApplyInstanceRule_
