@@ -77,7 +77,7 @@ applyRule ioTp n = do
         par1 = snd pars
         i =
             case s of
-                ((t:_,_,Nothing):_,_) ->
+                ((t:_,_,_):_,_) ->
                     let newTp =
                             modifyLabel
                                 (\(x,_) ->
@@ -97,7 +97,7 @@ applyRule ioTp n = do
                                          (fst
                                               (insertAndMoveToChild
                                                    newTp
-                                                   ( Just (fromJust inst, "")
+                                                   ( Just (fromJust inst, "instance")
                                                    , Nothing))))
                            else Nothing
                 _ -> Nothing
@@ -281,7 +281,8 @@ getInstanceCandidates node graph =
         (\x ->
               snd x /= "instance" &&
               (getVarNum (fst node) >= getVarNum (fst x) ||
-               ((\x ->
+               (isNothing ((\(_,_,x)->x) (head (fst (fst node)))) &&
+               (\x ->
                       case x of
                           (Right _) -> True
                           _ -> False)

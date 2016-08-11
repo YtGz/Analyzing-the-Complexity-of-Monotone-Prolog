@@ -4,7 +4,8 @@ module SymbolicEvaluationGraphs.InferenceRules where
 
 import Data.Maybe
 import Data.List
-import qualified Data.Map (elems, filter, filterWithKey, fromList)
+import qualified Data.Map
+       (elems, filter, filterWithKey, fromList, union)
 import Control.Arrow
 import Control.Monad (join)
 import Data.Implicit
@@ -43,6 +44,7 @@ eval :: AbstractState -> (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) =
     let (Just mgu) = unify' t h
         mguG = restrictSubstToG mgu g
+        mguGAndRenaming = restrictSubstToGForU mgu g
     in ( ( ( map (apply mgu) (maybe [] splitClauseBody b ++ qs)
            , compose sub mgu
            , Nothing) :
@@ -55,7 +57,7 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) =
                  (concatMap
                       Data.Rewriting.Term.vars
                       (Data.Map.elems (toMap mguG)))
-           , map (apply mguG *** apply mguG) u))
+           , map (apply mguGAndRenaming *** apply mguGAndRenaming) u))
        , (s, (g, u ++ [(t, h)])))
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
 
@@ -96,13 +98,24 @@ restrictSubstToG :: Subst' -> G -> Subst'
 restrictSubstToG sub g =
     fromMap
         (Data.Map.filterWithKey
-             (\k v ->
-                   elem (Var k) g ||
-                   Data.Rewriting.Term.isGround v -- ground instance
-                    || {-is this correct? how else does the instance rule work if we apply sub|G and not sub to U?-}
-                   Data.Rewriting.Term.isVar v -- pure renaming
-              )
+             (\k _ ->
+                   elem (Var k) g)
              (toMap sub))
+
+--is this correct? how else does the instance rule work if we apply sub|G and not sub to U?
+restrictSubstToGForU
+    :: Subst' -> G -> Subst'
+restrictSubstToGForU sub g =
+    fromMap
+        (Data.Map.union
+             (toMap (restrictSubstToG sub g))
+             (Data.Map.filter
+                  (\v ->
+                        Data.Rewriting.Term.isGround v -- ground instance
+                         ||
+                        Data.Rewriting.Term.isVar v -- pure renaming
+                   )
+                  (toMap sub)))
 
 -- we can use the backtrack rule if there is no concretization γ w.r.t. KB such that tγ ~ h
 isBacktrackingApplicable
@@ -215,12 +228,13 @@ groundnessAnalysis f groundInputs = do
 tryToApplyInstanceRule :: AbstractState
                        -> [AbstractState]
                        -> Maybe AbstractState
-tryToApplyInstanceRule ([(qs,_,_)],(g,u)) =
+tryToApplyInstanceRule ([(qs,_,c)],(g,u)) =
     find
         (\x ->
               case x of
                   ([],_) -> False
-                  ([(qs',_,_)],(g',u')) ->
+                  ([(qs',_,c')],(g',u')) ->
+                      c == c' &&
                       length qs == length qs' &&
                       let mu =
                               nubBy
