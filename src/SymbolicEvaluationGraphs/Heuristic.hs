@@ -66,12 +66,13 @@ applyRule ioTp n = do
     let ss = eval s
         s0 = fst ss
         s1 = snd ss
+        sps = split s
         sp0 = do
-              sps <- split s
-              return (fst sps)
+              sps' <- sps
+              return (fst sps')
         sp1 = do
-              sps <- split s
-              return (snd sps)
+              sps' <- sps
+              return (snd sps')
         pars = parallel s
         par0 = fst pars
         par1 = snd pars
@@ -105,12 +106,11 @@ applyRule ioTp n = do
             x <- x'
             nT <- applyRule (return (fst y)) n
             return
-                (fromMaybe
-                     (error "1")
+                (fromJust
                      (parent
                           (insert
                                (tree
-                                    ((fromMaybe (error "2") . firstChild)
+                                    ((fromJust . firstChild)
                                          (followThePath
                                               (tree (root nT))
                                               (pathToMe x))))
@@ -119,12 +119,11 @@ applyRule ioTp n = do
             x <- x'
             nT <- applyRule (return (snd y)) n
             return
-                (fromMaybe
-                     (error "4")
+                (fromJust
                      (parent
                           (insert
                                (tree
-                                    ((fromMaybe (error "5") . lastChild)
+                                    ((fromJust . lastChild)
                                          (followThePath
                                               (tree (root nT))
                                               (pathToMe x))))
@@ -247,10 +246,10 @@ insertAndMoveToChild tp (l,r) =
     if not (isLeaf tp)
         then error "Can only insert a new element at a leaf of the tree."
         else ( if isJust l
-                   then fromMaybe (error "7") (firstChild newTp)
+                   then fromJust (firstChild newTp)
                    else newTp
              , if isJust r
-                   then fromMaybe (error "8") (lastChild newTp)
+                   then fromJust (lastChild newTp)
                    else newTp)
   where
     newTp =
@@ -312,6 +311,7 @@ getVarNum (ss,_) =
              ss)
 
 isClauseRecursive :: Clause -> Bool
+isClauseRecursive (_,Nothing) = False
 isClauseRecursive (_,Just b) =
     any
         (\x ->

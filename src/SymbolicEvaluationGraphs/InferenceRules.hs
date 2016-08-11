@@ -43,7 +43,7 @@ eval :: AbstractState -> (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) =
     let (Just mgu) = unify' t h
         mguG = restrictSubstToG mgu g
-    in ( ( ( map (apply mgu) (splitClauseBody (fromJust b) ++ qs)
+    in ( ( ( map (apply mgu) (maybe [] splitClauseBody b ++ qs)
            , compose sub mgu
            , Nothing) :
            map
@@ -160,11 +160,13 @@ arityOfRootSymbol (Fun _ xs) = length xs
 split
     :: AbstractState -> IO (AbstractState, AbstractState)
 split ([(t:qs,sub,Nothing)],(g,u)) = do
-    g' <- nextG t g >>= (\x -> return (g `union` map (apply d) x))
+    g' <-
+        nextG t g >>=
+        (\x ->
+              return (g `union` map (apply d) x))
     return
-           ( ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
-           , ( [(map (apply d) qs, d, Nothing)]
-             , (g', map (apply d *** apply d) u)))
+        ( ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
+        , ([(map (apply d) qs, d, Nothing)], (g', map (apply d *** apply d) u)))
   where
     vs =
         map
@@ -178,15 +180,19 @@ split ([(t:qs,sub,Nothing)],(g,u)) = do
 nextG :: Term' -> G -> IO G
 nextG t g = do
     let gPos =
-          filter
-              (\p ->
-                    map
-                        Var
-                        (nub
-                             (Data.Rewriting.Term.vars
-                                  (fromJust (Data.Rewriting.Term.subtermAt t [p])))) ==
-                    g)
-              [0 .. arityOfRootSymbol t - 1]
+            filter
+                (\p ->
+                      null
+                          (map
+                               Var
+                               (nub
+                                    (Data.Rewriting.Term.vars
+                                         (fromJust
+                                              (Data.Rewriting.Term.subtermAt
+                                                   t
+                                                   [p])))) \\
+                           g))
+                [0 .. arityOfRootSymbol t - 1]
     gA <- groundnessAnalysis (root t) gPos
     return
         (nub
