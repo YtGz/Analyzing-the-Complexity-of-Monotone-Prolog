@@ -6,10 +6,13 @@ import Data.Implicit
 import Data.Foldable (toList)
 import Data.Maybe
 import Data.List (find, nubBy, nub, (\\))
+import Data.Map (fromList)
 import Control.Arrow ((***))
+import Control.Monad.State
 import Data.Either.Utils
 import Data.Tree.Zipper
 import ExprToTerm.Conversion
+import Query.Utilities
 import Data.Rewriting.Term (vars)
 import Data.Rewriting.Term.Type (Term(..))
 import Data.Rewriting.Substitution (unify, apply)
@@ -18,6 +21,7 @@ import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
         tryToApplyInstanceRule, parallel, unify', arityOfRootSymbol)
+import SymbolicEvaluationGraphs.Utilities (freshVariable)
 import Data.Tree
 import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 import qualified Data.Rewriting.Term (root)
@@ -28,10 +32,12 @@ minExSteps = 1
 maxBranchingFactor :: Int
 maxBranchingFactor = 4
 
-generateSymbolicEvaluationGraph :: AbstractState
+generateSymbolicEvaluationGraph :: QueryClass
                                 -> IO (BTree (AbstractState, String))
-generateSymbolicEvaluationGraph initialState = do
-    tp <- applyRule (return (fromTree (Node (initialState, "") []))) 0
+generateSymbolicEvaluationGraph queryClass = do
+    tp <- evalStateT (do
+      initialState <- getInitialAbstractState queryClass
+      applyRule (return (fromTree (Node (initialState, "") []))) 0) 0
     return (roseTreeToBTree (toTree tp))
 
 type TreePath a = [TreePos Full a -> TreePos Full a]
@@ -55,15 +61,28 @@ pathToMe t
 followThePath :: Tree a -> TreePath a -> TreePos Full a
 followThePath t = foldr ($) (fromTree t)
 
+getInitialAbstractState :: (Monad m) => QueryClass -> Control.Monad.State.StateT Int m AbstractState
+getInitialAbstractState (f,m) = do
+    (vs, gs) <- foldr
+          (\x s -> do
+                  (vs,gs) <- s
+                  v <- freshVariable
+                  case x of
+                       In -> return (v : vs, v : gs)
+                       Out -> return (v : vs, gs))
+          (return ([], []))
+          m
+    return ([([Fun f vs], fromMap (fromList []), Nothing)], (gs, []))
+
 applyRule
     :: IO (TreePos Full (AbstractState, String))
     -> Int
-    -> IO (TreePos Full (AbstractState, String))
+    -> Control.Monad.State.StateT Int IO (TreePos Full (AbstractState, String))
 applyRule ioTp n = do
-    tp <- ioTp
+    tp <- Control.Monad.State.lift ioTp
     let s = fst (label tp)
-    let ss = eval s
-        s0 = fst ss
+    ss <- eval s
+    let s0 = fst ss
         s1 = snd ss
         sps = split s
         sp0 = do
@@ -431,7 +450,7 @@ isFunctionSymbolRecursive (Fun f _) arity =
          (mapMaybe
               (\x ->
                     let startF = Fun f (map (Var . show) (take arity [1,2 ..]))
-                        sub = unify' startF (fst x)
+                        sub = unify startF (fst x) --TODO: do we have to use unify' here (and save state at beginning of this function and restore it at the end)?
                     in if isJust sub
                            then Just
                                     ((apply (fromJust sub) ***
@@ -451,7 +470,7 @@ isFunctionSymbolRecursive_ f hrs c =
     let his =
             mapMaybe
                 (\(x,y) ->
-                      let sub = unify' x (fst y)
+                      let sub = unify x (fst y) --TODO: do we have to use unify' here (and save state at beginning of this function and restore it at the end)?
                       in if isJust sub
                              then Just
                                       ((apply (fromJust sub) ***

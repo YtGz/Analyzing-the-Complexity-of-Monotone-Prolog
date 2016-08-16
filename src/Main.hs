@@ -91,8 +91,7 @@ import           Data.Map
 
 main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example18.pl"
-      let o = getInitialAbstractState (head (getQueryClasses exprs))
-      graph <- generateSymbolicEvaluationGraph o
+      graph <- generateSymbolicEvaluationGraph (head (getQueryClasses exprs))
       printSymbolicEvaluationGraph graph
 
 {-main = print

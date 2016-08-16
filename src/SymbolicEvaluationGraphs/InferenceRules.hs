@@ -8,6 +8,8 @@ import qualified Data.Map
        (elems, filter, filterWithKey, fromList, union)
 import Control.Arrow
 import Control.Monad (join)
+import qualified Control.Monad.State
+import Control.Monad.Identity
 import Data.Implicit
 import Data.Bifunctor (bimap)
 import Data.Function (on)
@@ -40,25 +42,27 @@ caseRule ((t:qs,sub,Nothing):s,kb) =
     , kb)
 caseRule _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 
-eval :: AbstractState -> (AbstractState, AbstractState)
-eval ((t:qs,sub,Just (h,b)):s,(g,u)) =
-    let (Just mgu) = unify' t h
-        mguG = restrictSubstToG mgu g
+eval :: (Monad m) => AbstractState
+     -> Control.Monad.State.StateT Int m (AbstractState, AbstractState)
+eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
+    (Just mgu) <- unify' t h
+    let mguG = restrictSubstToG mgu g
         mguGAndRenaming = restrictSubstToGForU mgu g
-    in ( ( ( map (apply mgu) (maybe [] splitClauseBody b ++ qs)
-           , compose sub mgu
-           , Nothing) :
-           map
-               (\(t',s',c') ->
-                     (map (apply mguG) t', compose s' mguG, c'))
-               s
-         , ( map
-                 Var
-                 (concatMap
-                      Data.Rewriting.Term.vars
-                      (Data.Map.elems (toMap mguG)))
-           , map (apply mguGAndRenaming *** apply mguGAndRenaming) u))
-       , (s, (g, u ++ [(t, h)])))
+    return
+        ( ( ( map (apply mgu) (maybe [] splitClauseBody b ++ qs)
+            , compose sub mgu
+            , Nothing) :
+            map
+                (\(t',s',c') ->
+                      (map (apply mguG) t', compose s' mguG, c'))
+                s
+          , ( map
+                  Var
+                  (concatMap
+                       Data.Rewriting.Term.vars
+                       (Data.Map.elems (toMap mguG)))
+            , map (apply mguGAndRenaming *** apply mguGAndRenaming) u))
+        , (s, (g, u ++ [(t, h)])))
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
 
 backtrack :: AbstractState -> AbstractState
@@ -79,7 +83,7 @@ slice t =
 
 -- unify, introducing fresh abstract variables
 unify'
-    :: Term' -> Term' -> Maybe Subst'
+    :: (Monad m) => Term' -> Term' -> Control.Monad.State.StateT Int m (Maybe Subst')
 unify' t1 t2
   | Just s <- unify t2 t1   -- note the argument order: use unify h t instead of unify t h to ensure mapping from variables (element V) to abstract variables (element A)
    =
@@ -90,9 +94,25 @@ unify' t1 t2
                        (concatMap
                             Data.Rewriting.Term.vars
                             (Data.Map.elems (toMap s))))
-      in Just
-             (fromJust (unify (Fun "" vs) (Fun "" (map freshVariable vs))) `compose`
-              s) -- compose takes arguments in reverse order!!!
+      in do freshVariables <- mapFreshVariables (return vs)
+            return
+                (Just
+                     (fromJust (unify (Fun "" vs) (Fun "" freshVariables)) `compose`
+                      s)) -- compose takes arguments in reverse order!!!
+
+--TODO: there has to be a higher-order function that can be used instead
+mapFreshVariables
+    :: (Monad m)
+    => Control.Monad.State.StateT Int m [Term']
+    -> Control.Monad.State.StateT Int m [Term']
+mapFreshVariables s = do
+    l <- s
+    case l of
+        [] -> return []
+        (_:xs) -> do
+            v <- freshVariable
+            vs <- mapFreshVariables (return xs)
+            return (v : vs)
 
 restrictSubstToG :: Subst' -> G -> Subst'
 restrictSubstToG sub g =
@@ -171,24 +191,26 @@ arityOfRootSymbol (Fun _ xs) = length xs
 
 -- split rule for states with a single goal
 split
-    :: AbstractState -> IO (AbstractState, AbstractState)
+    :: AbstractState
+    -> Control.Monad.State.StateT Int IO (AbstractState, AbstractState)
 split ([(t:qs,sub,Nothing)],(g,u)) = do
+    let vs =
+            map
+                Var
+                (nub
+                     (Data.Rewriting.Term.vars t ++
+                      concatMap Data.Rewriting.Term.vars qs)) \\
+            g
+    freshVariables <- mapFreshVariables (return vs)
+    let d = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
     g' <-
-        nextG t g >>=
-        (\x ->
-              return (g `union` map (apply d) x))
+        Control.Monad.State.lift
+            (nextG t g >>=
+             (\x ->
+                   return (g `union` map (apply d) x)))
     return
         ( ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
         , ([(map (apply d) qs, d, Nothing)], (g', map (apply d *** apply d) u)))
-  where
-    vs =
-        map
-            Var
-            (nub
-                 (Data.Rewriting.Term.vars t ++
-                  concatMap Data.Rewriting.Term.vars qs)) \\
-        g
-    d = fromJust (unify (Fun "" vs) (Fun "" (map freshVariable vs)))
 
 nextG :: Term' -> G -> IO G
 nextG t g = do

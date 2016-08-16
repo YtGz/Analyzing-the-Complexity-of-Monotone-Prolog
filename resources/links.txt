@@ -1,3 +1,6 @@
 https://github.com/acharal/parsec-prolog
 http://cx4a.org/posts/2014-06-03-solve-the-configurations-problem-for-haskell.html
 http://stackoverflow.com/questions/5920200/how-to-prevent-common-sub-expression-elimination-cse-with-ghc
+http://blog.sigfpe.com/2006/05/grok-haskell-monad-transformers.html
+https://wiki.haskell.org/Simple_StateT_use
+http://hackage.haskell.org/package/mmorph-1.0.4/docs/Control-Monad-Morph.html#g:4
