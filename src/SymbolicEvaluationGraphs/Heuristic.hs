@@ -9,6 +9,7 @@ import Data.List (find, nubBy, nub, (\\))
 import Data.Map (fromList)
 import Control.Arrow ((***))
 import Control.Monad.State
+import Control.Monad.Morph
 import Data.Either.Utils
 import Data.Tree.Zipper
 import ExprToTerm.Conversion
@@ -81,9 +82,13 @@ applyRule
 applyRule ioTp n = do
     tp <- Control.Monad.State.lift ioTp
     let s = fst (label tp)
-    ss <- eval s
-    let s0 = fst ss
-        s1 = snd ss
+    let ss = eval s :: Control.Monad.State.State Int (AbstractState, AbstractState)
+        s0 = do
+          e <- ss
+          return (fst e)
+        s1 = do
+            e <- ss
+            return (snd e)
         sps = split s
         sp0 = do
             sps' <- sps
@@ -145,13 +150,17 @@ applyRule ioTp n = do
                                               (tree (root nT))
                                               (pathToMe x))))
                                (Data.Tree.Zipper.last (children x)))))
-        cs0 = insertAndMoveToChild tp (Just (s0, ""), Just (s1, ""))
+        cs0 = do
+          s0' <- s0
+          s1' <- s1
+          return (insertAndMoveToChild tp (Just (s0', ""), Just (s1', "")))
         cs1 = do
             sp0' <- sp0
             sp1' <- sp1
             return (insertAndMoveToChild tp (Just (sp0', ""), Just (sp1', "")))
         cs2 = insertAndMoveToChild tp (Just (par0, ""), Just (par1, ""))
         e = do
+            cs0' <- hoist generalize cs0
             l <-
                 b0
                     (return
@@ -159,8 +168,8 @@ applyRule ioTp n = do
                               (\(x,_) ->
                                     (x, "eval"))
                               tp))
-                    cs0
-            let tp = insert (tree (snd cs0)) (Data.Tree.Zipper.last (children l))
+                    cs0'
+            let tp = insert (tree (snd cs0')) (Data.Tree.Zipper.last (children l))
             b1 l tp
         sp = do
             cs1' <- cs1
@@ -175,8 +184,7 @@ applyRule ioTp n = do
             let tp = insert (tree (snd cs1')) (Data.Tree.Zipper.last (children l))
             b1 l tp
         par = do
-            l <-
-                b0
+            l <- b0
                     (return
                          (modifyLabel
                               (\(x,_) ->
