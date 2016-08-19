@@ -25,7 +25,7 @@ printSymbolicEvaluationGraph t =
     mainWith
         ((renderTree'
               fst
-              (\((n,s),p1) (_,p2) ->
+              (\((n,s),p1) ((_,s'),p2) ->
                     let rule = write (snd s)
                         additionToU =
                             if snd s == "eval" && fst (unp2 p2) >=
@@ -33,8 +33,8 @@ printSymbolicEvaluationGraph t =
                                 then write (getAdditionToU (fst s))
                                 else write ""
                         mu =
-                            if snd s == "instance"
-                                then write (getInstanceSub s t)
+                            if snd s' == "instanceChild"
+                                then write (showSubst' ((\(_,mu,_) -> mu)(head (fst (fst s')))))
                                 else write ""
                         annotationToTheRight = additionToU `atop` mu
                     in rule #
@@ -83,56 +83,6 @@ printSymbolicEvaluationGraph t =
 getAdditionToU :: AbstractState -> String
 getAdditionToU ((t:_,_,Just (h,_)):_,_) = showTerm' t ++ " !~ " ++ showTerm' h
 getAdditionToU s = error "Malformed abstract state."
-
--- returns the substitution used when applying the instance rule
-getInstanceSub
-    :: (AbstractState, String) -> BTree (AbstractState, String) -> String
-getInstanceSub n g =
-    maybe "" showSubst' (getInstanceSub_ n (getInstanceCandidates n g))
-
-getInstanceSub_ :: (AbstractState, String)
-                -> [(AbstractState, String)]
-                -> Maybe Subst'
-getInstanceSub_ _ [] = Nothing
-getInstanceSub_ n (x:xs) =
-    let qs =
-            let ss = fst (fst n)
-            in case ss of
-                   [] -> []
-                   _ ->
-                       (\(x,_,_) ->
-                             x)
-                           (head ss)
-        qs' =
-          let ss = fst (fst x)
-          in case ss of
-                 [] -> []
-                 _ ->
-                     (\(x,_,_) ->
-                           x)
-                         (head ss)
-    in if length qs == length qs'
-           then let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
-                in if length mu == 1 && isJust (head mu) &&
-                      (\xs ys ->
-                            null (xs \\ ys) && null (ys \\ xs))
-                          (nub (fst (snd (fst n))))
-                          (nub
-                               (concatMap
-                                    (map Var . Data.Rewriting.Term.vars .
-                                     Data.Rewriting.Substitution.apply
-                                         (fromJust (head mu)))
-                                    (fst (snd (fst x))))) &&
-                      null
-                          (map
-                               (fmap
-                                    (Data.Rewriting.Substitution.apply
-                                         (fromJust (head mu))))
-                               (snd (snd (fst x))) \\
-                           snd (snd (fst n)))
-                       then head mu
-                       else getInstanceSub_ n xs
-           else getInstanceSub_ n xs
 
 printAbstractState :: AbstractState -> QDiagram B V2 Double Any
 printAbstractState ([],_) = write "e"
@@ -184,7 +134,7 @@ showTermWithG (Var v) g =
         then "^" ++ v
         else v
 
-showSubst' :: Subst' -> String
+showSubst' :: Subst' -> String -- TODO: if instanceChild: don't display sub
 showSubst' sub =
     if null ls
         then ""

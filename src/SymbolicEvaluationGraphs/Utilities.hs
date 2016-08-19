@@ -18,22 +18,6 @@ import Data.Rewriting.Term (vars)
 import Text.Read (readMaybe)
 import Data.Maybe
 
-{-counter :: IORef Int
-{-# NOINLINE counter #-} -}
-
-{-counter = unsafePerformIO (newIORef 0)
-
-freshVariable :: Term' -> Term' -- TODO: eliminate impurity introduced by using unsafePerformIO
-freshVariable _ =
-    Var
-        ("T" ++
-         show
-             (unsafePerformIO
-                  (atomicModifyIORef
-                       counter
-                       (\x ->
-                             (x + 1, x)))))-}
-
 freshVariable :: (Monad m) => Control.Monad.State.StateT Int m Term'
 freshVariable = Control.Monad.State.state (\i -> (Var ("T" ++ show i),i+1))
 

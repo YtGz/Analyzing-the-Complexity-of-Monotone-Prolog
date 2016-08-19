@@ -121,7 +121,7 @@ applyRule ioTp n = do
                                          (fst
                                               (insertAndMoveToChild
                                                    newTp
-                                                   ( Just (fromJust inst, "instance")
+                                                   ( Just (fromJust inst, "instanceChild")
                                                    , Nothing))))
                            else Nothing
                 _ -> Nothing

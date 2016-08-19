@@ -247,22 +247,19 @@ groundnessAnalysis f groundInputs = do
     print (f ++ " " ++ show groundInputs)
     readLn :: IO [Int]
 
+-- contrary to the usual substitution labels, the instance child is annotated by the substitution mu associated to the instance father
 tryToApplyInstanceRule :: AbstractState
                        -> [AbstractState]
                        -> Maybe AbstractState
-tryToApplyInstanceRule ([(qs,_,c)],(g,u)) =
-    find
-        (\x ->
-              case x of
-                  ([],_) -> False
-                  ([(qs',_,c')],(g',u')) ->
-                      c == c' &&
-                      length qs == length qs' &&
+tryToApplyInstanceRule _ [] = Nothing
+tryToApplyInstanceRule n (([],_):xs) = tryToApplyInstanceRule n xs
+tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) (([(qs',_,c')],(g',u')):xs) =
+  if c == c' && length qs == length qs' then
                       let mu =
                               nubBy
                                   ((==) `on` fmap toMap)
                                   (zipWith unify qs' qs)
-                      in length mu == 1 &&
+                      in if length mu == 1 &&
                          isJust (head mu) &&
                          (\xs ys ->
                                null (xs \\ ys) && null (ys \\ xs))
@@ -278,7 +275,9 @@ tryToApplyInstanceRule ([(qs,_,c)],(g,u)) =
                                   (join bimap (apply (fromJust (head mu))))
                                   (nub u') \\
                               nub u)
-                  _ -> False)
+                              then Just ([(qs',fromJust (head mu),c')],(g',u'))
+                              else tryToApplyInstanceRule n xs
+                  else tryToApplyInstanceRule n xs
 
 parallel :: AbstractState -> (AbstractState, AbstractState)
 parallel (ss,kb) = (([head ss], kb), (tail ss, kb))
