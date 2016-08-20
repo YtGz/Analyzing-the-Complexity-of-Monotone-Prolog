@@ -34,7 +34,11 @@ printSymbolicEvaluationGraph t =
                                 else write ""
                         mu =
                             if snd s' == "instanceChild"
-                                then write (showSubst' ((\(_,mu,_) -> mu)(head (fst (fst s')))))
+                                then write
+                                         (showSubst'
+                                              ((\(_,mu,_) ->
+                                                     mu)
+                                                   (head (fst (fst s')))))
                                 else write ""
                         annotationToTheRight = additionToU `atop` mu
                     in rule #

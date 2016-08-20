@@ -42,8 +42,10 @@ caseRule ((t:qs,sub,Nothing):s,kb) =
     , kb)
 caseRule _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 
-eval :: (Monad m) => AbstractState
-     -> Control.Monad.State.StateT Int m (AbstractState, AbstractState)
+eval
+    :: (Monad m)
+    => AbstractState
+    -> Control.Monad.State.StateT Int m (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
     (Just mgu) <- unify' t h
     let mguG = restrictSubstToG mgu g
@@ -83,7 +85,8 @@ slice t =
 
 -- unify, introducing fresh abstract variables
 unify'
-    :: (Monad m) => Term' -> Term' -> Control.Monad.State.StateT Int m (Maybe Subst')
+    :: (Monad m)
+    => Term' -> Term' -> Control.Monad.State.StateT Int m (Maybe Subst')
 unify' t1 t2
   | Just s <- unify t2 t1   -- note the argument order: use unify h t instead of unify t h to ensure mapping from variables (element V) to abstract variables (element A)
    =
@@ -248,36 +251,29 @@ groundnessAnalysis f groundInputs = do
     readLn :: IO [Int]
 
 -- contrary to the usual substitution labels, the instance child is annotated by the substitution mu associated to the instance father
-tryToApplyInstanceRule :: AbstractState
-                       -> [AbstractState]
-                       -> Maybe AbstractState
+tryToApplyInstanceRule
+    :: AbstractState -> [AbstractState] -> Maybe AbstractState
 tryToApplyInstanceRule _ [] = Nothing
-tryToApplyInstanceRule n (([],_):xs) = tryToApplyInstanceRule n xs
 tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) (([(qs',_,c')],(g',u')):xs) =
-  if c == c' && length qs == length qs' then
-                      let mu =
-                              nubBy
-                                  ((==) `on` fmap toMap)
-                                  (zipWith unify qs' qs)
-                      in if length mu == 1 &&
-                         isJust (head mu) &&
-                         (\xs ys ->
-                               null (xs \\ ys) && null (ys \\ xs))
-                             (nub g)
-                             (nub
-                                  (concatMap
-                                       (map Var .
-                                        Data.Rewriting.Term.vars .
-                                        apply (fromJust (head mu)))
-                                       g')) &&
-                         null
-                             (map
-                                  (join bimap (apply (fromJust (head mu))))
-                                  (nub u') \\
-                              nub u)
-                              then Just ([(qs',fromJust (head mu),c')],(g',u'))
-                              else tryToApplyInstanceRule n xs
-                  else tryToApplyInstanceRule n xs
+    if c == c' && length qs == length qs'
+        then let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
+             in if length mu == 1 &&
+                   isJust (head mu) &&
+                   (\xs ys ->
+                         null (xs \\ ys) && null (ys \\ xs))
+                       (nub g)
+                       (nub
+                            (concatMap
+                                 (map Var .
+                                  Data.Rewriting.Term.vars .
+                                  apply (fromJust (head mu)))
+                                 g')) &&
+                   null
+                       (map (join bimap (apply (fromJust (head mu)))) (nub u') \\
+                        nub u)
+                    then Just ([(qs', fromJust (head mu), c')], (g', u'))
+                    else tryToApplyInstanceRule n xs
+        else tryToApplyInstanceRule n xs
 tryToApplyInstanceRule n (_:xs) = tryToApplyInstanceRule n xs
 
 parallel :: AbstractState -> (AbstractState, AbstractState)

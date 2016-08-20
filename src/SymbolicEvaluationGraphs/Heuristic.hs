@@ -37,9 +37,11 @@ maxBranchingFactor = 4
 generateSymbolicEvaluationGraph :: QueryClass
                                 -> IO (BTree (AbstractState, String))
 generateSymbolicEvaluationGraph queryClass = do
-    tp <- evalStateT (do
-      initialState <- getInitialAbstractState queryClass
-      applyRule (return (fromTree (Node (initialState, "") []))) 0) 0
+    tp <-
+        evalStateT
+            (do initialState <- getInitialAbstractState queryClass
+                applyRule (return (fromTree (Node (initialState, "") []))) 0)
+            0
     return (roseTreeToBTree (toTree tp))
 
 type TreePath a = [TreePos Full a -> TreePos Full a]
@@ -63,17 +65,20 @@ pathToMe t
 followThePath :: Tree a -> TreePath a -> TreePos Full a
 followThePath t = foldr ($) (fromTree t)
 
-getInitialAbstractState :: (Monad m) => QueryClass -> Control.Monad.State.StateT Int m AbstractState
+getInitialAbstractState
+    :: (Monad m)
+    => QueryClass -> Control.Monad.State.StateT Int m AbstractState
 getInitialAbstractState (f,m) = do
-    (vs, gs) <- foldr
-          (\x s -> do
-                  (vs,gs) <- s
-                  v <- freshVariable
-                  case x of
-                       In -> return (v : vs, v : gs)
-                       Out -> return (v : vs, gs))
-          (return ([], []))
-          m
+    (vs,gs) <-
+        foldr
+            (\x s -> do
+                 (vs,gs) <- s
+                 v <- freshVariable
+                 case x of
+                     In -> return (v : vs, v : gs)
+                     Out -> return (v : vs, gs))
+            (return ([], []))
+            m
     return ([([Fun f vs], fromMap (fromList []), Nothing)], (gs, []))
 
 applyRule
@@ -83,10 +88,11 @@ applyRule
 applyRule ioTp n = do
     tp <- Control.Monad.State.lift ioTp
     let s = fst (label tp)
-    let ss = eval s :: Control.Monad.State.State Int (AbstractState, AbstractState)
+    let ss =
+            eval s :: Control.Monad.State.State Int (AbstractState, AbstractState)
         s0 = do
-          e <- ss
-          return (fst e)
+            e <- ss
+            return (fst e)
         s1 = do
             e <- ss
             return (snd e)
@@ -108,23 +114,25 @@ applyRule ioTp n = do
                                 (\(x,_) ->
                                       (x, "instance"))
                                 tp
-                    instanceCandidates <- getInstanceCandidates
-                         (label tp)
-                         (roseTreeToBTree (toTree newTp))
+                    instanceCandidates <-
+                        getInstanceCandidates
+                            (label tp)
+                            (roseTreeToBTree (toTree newTp))
                     let inst =
                             tryToApplyInstanceRule
                                 s
-                                (map
-                                     fst
-                                     instanceCandidates)
+                                (map fst instanceCandidates)
                     if isJust inst
-                           then return (Just
-                                         (fst
-                                              (insertAndMoveToChild
-                                                   newTp
-                                                   ( Just (fromJust inst, "instanceChild")
-                                                   , Nothing))))
-                           else return Nothing
+                        then return
+                                 (Just
+                                      (fst
+                                           (insertAndMoveToChild
+                                                newTp
+                                                ( Just
+                                                      ( fromJust inst
+                                                      , "instanceChild")
+                                                , Nothing))))
+                        else return Nothing
                 _ -> return Nothing
         b0 x' y = do
             x <- x'
@@ -152,9 +160,9 @@ applyRule ioTp n = do
                                               (pathToMe x))))
                                (Data.Tree.Zipper.last (children x)))))
         cs0 = do
-          s0' <- s0
-          s1' <- s1
-          return (insertAndMoveToChild tp (Just (s0', ""), Just (s1', "")))
+            s0' <- s0
+            s1' <- s1
+            return (insertAndMoveToChild tp (Just (s0', ""), Just (s1', "")))
         cs1 = do
             sp0' <- sp0
             sp1' <- sp1
@@ -170,7 +178,10 @@ applyRule ioTp n = do
                                     (x, "eval"))
                               tp))
                     cs0'
-            let tp = insert (tree (snd cs0')) (Data.Tree.Zipper.last (children l))
+            let tp =
+                    insert
+                        (tree (snd cs0'))
+                        (Data.Tree.Zipper.last (children l))
             b1 l tp
         sp = do
             cs1' <- cs1
@@ -182,17 +193,24 @@ applyRule ioTp n = do
                                     (x, "split"))
                               tp))
                     cs1'
-            let tp = insert (tree (snd cs1')) (Data.Tree.Zipper.last (children l))
+            let tp =
+                    insert
+                        (tree (snd cs1'))
+                        (Data.Tree.Zipper.last (children l))
             b1 l tp
         par = do
-            l <- b0
+            l <-
+                b0
                     (return
                          (modifyLabel
                               (\(x,_) ->
                                     (x, "parallel"))
                               tp))
                     cs2
-            let tp = insert (tree (snd cs2)) (Data.Tree.Zipper.last (children l))
+            let tp =
+                    insert
+                        (tree (snd cs2))
+                        (Data.Tree.Zipper.last (children l))
             b1 l tp
         c =
             applyRule
@@ -226,48 +244,56 @@ applyRule ioTp n = do
                                     tp)
                                (Just (suc s, ""), Nothing))))
                 n
-        _ -> if isJust
-               ((\(_,_,x) ->
-                      x)
-                    (head (fst s))) &&
-                isBacktrackingApplicable s then
-              applyRule
-                  (return
-                       (fst
-                            (insertAndMoveToChild
-                                 (modifyLabel
-                                      (\(x,_) ->
-                                            (x, "backtrack"))
-                                      tp)
-                                 (Just (backtrack s, ""), Nothing))))
-                  n
-          else do
-            b <- case s of
-                 ((t:_,_,Nothing):_,_) ->
-                     if case Data.Rewriting.Term.root t of
-                           (Left _) -> True
-                           _ -> False
-                           then
-                             return False else
-                         hoist generalize (isFunctionSymbolRecursive
-                             (Fun (fromRight (Data.Rewriting.Term.root t)) [])
-                             (arityOfRootSymbol t))
-                 ((_:_,_,Just clause):_,_) -> hoist generalize (isClauseRecursive clause)
-            if n >= minExSteps && b then
-              if length (fst s) > 1
-                  then par
-                  else do
-                    i' <- hoist generalize i
-                    maybe
-                           (case s of
-                                (([_],_,Nothing):_,_) -> c
-                                (([_],_,_):_,_) -> e
-                                _ -> sp)
-                          return i'
-             else
-              case s of
-                  ((_,_,Nothing):_,_) -> c
-                  _ -> e
+        _ ->
+            if isJust
+                   ((\(_,_,x) ->
+                          x)
+                        (head (fst s))) &&
+               isBacktrackingApplicable s
+                then applyRule
+                         (return
+                              (fst
+                                   (insertAndMoveToChild
+                                        (modifyLabel
+                                             (\(x,_) ->
+                                                   (x, "backtrack"))
+                                             tp)
+                                        (Just (backtrack s, ""), Nothing))))
+                         n
+                else do
+                    b <-
+                        case s of
+                            ((t:_,_,Nothing):_,_) ->
+                                if case Data.Rewriting.Term.root t of
+                                       (Left _) -> True
+                                       _ -> False
+                                    then return False
+                                    else hoist
+                                             generalize
+                                             (isFunctionSymbolRecursive
+                                                  (Fun
+                                                       (fromRight
+                                                            (Data.Rewriting.Term.root
+                                                                 t))
+                                                       [])
+                                                  (arityOfRootSymbol t))
+                            ((_:_,_,Just clause):_,_) ->
+                                hoist generalize (isClauseRecursive clause)
+                    if n >= minExSteps && b
+                        then if length (fst s) > 1
+                                 then par
+                                 else do
+                                     i' <- hoist generalize i
+                                     maybe
+                                         (case s of
+                                              (([_],_,Nothing):_,_) -> c
+                                              (([_],_,_):_,_) -> e
+                                              _ -> sp)
+                                         return
+                                         i'
+                        else case s of
+                                 ((_,_,Nothing):_,_) -> c
+                                 _ -> e
 
 insertAndMoveToChild
     :: TreePos Full (AbstractState, String)
@@ -307,28 +333,33 @@ getInstanceCandidates
     -> BTree (AbstractState, String)
     -> Control.Monad.State.State Int [(AbstractState, String)]
 getInstanceCandidates node graph = do
-    isRecursive <- isFunctionSymbolRecursive
-        (nodeHead node)
-        (arityOfRootSymbol
-             ((\(((t:_,_,Nothing):_,_),_) ->
-                    t)
-                  node))
-    return (filter
-        (\x ->
-              snd x /= "instance" &&
-              (getVarNum (fst node) >= getVarNum (fst x) ||
-               (isNothing ((\(_,_,x)->x) (head (fst (fst node)))) &&
-               (\x ->
-                      case x of
-                          (Right _) -> True
-                          _ -> False)
-                    (Data.Rewriting.Term.root
-                         ((\(((t:_,_,_):_,_),_) ->
-                                t)
-                              node)) &&
-                isRecursive &&
-                branchingFactor (nodeHead node) > maxBranchingFactor)))
-        (toList graph))
+    isRecursive <-
+        isFunctionSymbolRecursive
+            (nodeHead node)
+            (arityOfRootSymbol
+                 ((\(((t:_,_,Nothing):_,_),_) ->
+                        t)
+                      node))
+    return
+        (filter
+             (\x ->
+                   snd x /= "instance" &&
+                   (getVarNum (fst node) >= getVarNum (fst x) ||
+                    (isNothing
+                         ((\(_,_,x) ->
+                                x)
+                              (head (fst (fst node)))) &&
+                     (\x ->
+                           case x of
+                               (Right _) -> True
+                               _ -> False)
+                         (Data.Rewriting.Term.root
+                              ((\(((t:_,_,_):_,_),_) ->
+                                     t)
+                                   node)) &&
+                     isRecursive &&
+                     branchingFactor (nodeHead node) > maxBranchingFactor)))
+             (toList graph))
 
 nodeHead :: (AbstractState, String) -> Term'
 nodeHead (((t:_,_,Nothing):_,_),_) =
@@ -346,15 +377,16 @@ getVarNum (ss,_) =
 isClauseRecursive :: Clause -> Control.Monad.State.State Int Bool
 isClauseRecursive (_,Nothing) = return False
 isClauseRecursive (_,Just b) =
-    (fmap or . mapM --anyM
-        (\x ->
-          if case Data.Rewriting.Term.root x of (Left _) -> True
-                                                _ -> False
-             then return False else
-              isFunctionSymbolRecursive
-                  (Fun (fromRight (Data.Rewriting.Term.root x)) [])
-                  (arityOfRootSymbol x)
-              ))
+    (fmap or .
+     mapM --anyM
+         (\x ->
+               if case Data.Rewriting.Term.root x of
+                      (Left _) -> True
+                      _ -> False
+                   then return False
+                   else isFunctionSymbolRecursive
+                            (Fun (fromRight (Data.Rewriting.Term.root x)) [])
+                            (arityOfRootSymbol x)))
         (getMetaPredications b)
 
 isFunctionSymbolRecursive
@@ -362,152 +394,167 @@ isFunctionSymbolRecursive
     => Term' -> Int -> Control.Monad.State.State Int Bool
 isFunctionSymbolRecursive (Fun f _) arity =
     if f == "repeat" ||
-    f `notElem`
-      [ "abolish"
-      , "arg"
-      , "=:="
-      , "=\\="
-      , ">"
-      , ">="
-      , "<"
-      , "=<"
-      , "asserta"
-      , "assertz"
-      , "at_end_of_stream"
-      , "atom"
-      , "atom_chars"
-      , "atom_codes"
-      , "atom_concat"
-      , "atom_length"
-      , "atomic"
-      , "bagof"
-      , "call"
-      , "catch"
-      , "char_code"
-      , "char_conversion"
-      , "clause"
-      , "close"
-      , "compound"
-      , ","
-      , "copy_term"
-      , "current_char_conversion"
-      , "current_input"
-      , "current_op"
-      , "current_output"
-      , "current_predicate"
-      , "current_prolog_flag"
-      , "!"
-      , ";"
-      , "fail"
-      , "findall"
-      , "float"
-      , "flush_output"
-      , "functor"
-      , "get_byte"
-      , "get_char"
-      , "get_code"
-      , "halt"
-      , "->"
-      , "integer"
-      , "is"
-      , "nl"
-      , "nonvar"
-      , "\\+"
-      , "number"
-      , "number_chars"
-      , "number_codes"
-      , "once"
-      , "op"
-      , "open"
-      , "peek_byte"
-      , "peek_char"
-      , "peek_code"
-      , "put_byte"
-      , "put_char"
-      , "put_code"
-      , "read"
-      , "read_term"
-      , "retract"
-      , "set_input"
-      , "set_output"
-      , "set_prolog_flag"
-      , "set_stream_position"
-      , "setof"
-      , "stream_property"
-      , "sub_atom"
-      , "@>"
-      , "@>="
-      , "=="
-      , "@<"
-      , "@=<"
-      , "\\=="
-      , "throw"
-      , "true"
-      , "\\="
-      , "="
-      , "unify_with_occurs_check"
-      , "=.."
-      , "var"
-      , "write"
-      , "write_canonical"
-      , "write_term"
-      , "writeq"] then do
-        clauses <- mapMaybeM
-             (\x -> do
-                   let startF = Fun f (map (Var . show) (take arity [1,2 ..]))
-                   sub <- unify' startF (fst x) --TODO: do we have to use unify' here (and save state at beginning of this function and restore it at the end)?
-                   if isJust sub
-                          then return (Just
-                                   ((apply (fromJust sub) ***
-                                     fmap (apply (fromJust sub)))
-                                        x))
-                          else return Nothing)
-             (filter
-                  (\x ->
-                        Right f == Data.Rewriting.Term.root (fst x))
-                  param_)
-        (fmap or . mapM --anyM
-             (\x ->
-                   isFunctionSymbolRecursive_
-                       f
-                       [Data.Rewriting.Term.root (fst x)]
-                       x))
-             clauses else return False
+       f `notElem`
+       [ "abolish"
+       , "arg"
+       , "=:="
+       , "=\\="
+       , ">"
+       , ">="
+       , "<"
+       , "=<"
+       , "asserta"
+       , "assertz"
+       , "at_end_of_stream"
+       , "atom"
+       , "atom_chars"
+       , "atom_codes"
+       , "atom_concat"
+       , "atom_length"
+       , "atomic"
+       , "bagof"
+       , "call"
+       , "catch"
+       , "char_code"
+       , "char_conversion"
+       , "clause"
+       , "close"
+       , "compound"
+       , ","
+       , "copy_term"
+       , "current_char_conversion"
+       , "current_input"
+       , "current_op"
+       , "current_output"
+       , "current_predicate"
+       , "current_prolog_flag"
+       , "!"
+       , ";"
+       , "fail"
+       , "findall"
+       , "float"
+       , "flush_output"
+       , "functor"
+       , "get_byte"
+       , "get_char"
+       , "get_code"
+       , "halt"
+       , "->"
+       , "integer"
+       , "is"
+       , "nl"
+       , "nonvar"
+       , "\\+"
+       , "number"
+       , "number_chars"
+       , "number_codes"
+       , "once"
+       , "op"
+       , "open"
+       , "peek_byte"
+       , "peek_char"
+       , "peek_code"
+       , "put_byte"
+       , "put_char"
+       , "put_code"
+       , "read"
+       , "read_term"
+       , "retract"
+       , "set_input"
+       , "set_output"
+       , "set_prolog_flag"
+       , "set_stream_position"
+       , "setof"
+       , "stream_property"
+       , "sub_atom"
+       , "@>"
+       , "@>="
+       , "=="
+       , "@<"
+       , "@=<"
+       , "\\=="
+       , "throw"
+       , "true"
+       , "\\="
+       , "="
+       , "unify_with_occurs_check"
+       , "=.."
+       , "var"
+       , "write"
+       , "write_canonical"
+       , "write_term"
+       , "writeq"]
+        then do
+            clauses <-
+                mapMaybeM
+                    (\x -> do
+                         let startF =
+                                 Fun f (map (Var . show) (take arity [1,2 ..]))
+                         sub <- unify' startF (fst x) --TODO: save state at beginning of this function and restore it at the end
+                         if isJust sub
+                             then return
+                                      (Just
+                                           ((apply (fromJust sub) ***
+                                             fmap (apply (fromJust sub)))
+                                                x))
+                             else return Nothing)
+                    (filter
+                         (\x ->
+                               Right f == Data.Rewriting.Term.root (fst x))
+                         param_)
+            (fmap or .
+             mapM --anyM
+                 (\x ->
+                       isFunctionSymbolRecursive_
+                           f
+                           [Data.Rewriting.Term.root (fst x)]
+                           x))
+                clauses
+        else return False
 isFunctionSymbolRecursive _ _ = error "No function symbol provided."
 
 isFunctionSymbolRecursive_
     :: Implicit_ [Clause]
-    => String -> [Either String String] -> Clause -> Control.Monad.State.State Int Bool
+    => String
+    -> [Either String String]
+    -> Clause
+    -> Control.Monad.State.State Int Bool
 isFunctionSymbolRecursive_ f hrs c = do
-    his <- mapMaybeM
-                (\(x,y) -> do
-                      sub <- unify' x (fst y) --TODO: do we have to use unify' here (and save state at beginning of this function and restore it at the end)?
-                      if isJust sub
-                             then return (Just
-                                      ((apply (fromJust sub) ***
-                                        fmap (apply (fromJust sub)))
-                                           y))
-                             else return Nothing)
-                (filter
-                     (\(x,y) ->
-                           Data.Rewriting.Term.root x ==
-                           Data.Rewriting.Term.root (fst y))
-                     (maybe [] getMetaPredications (snd c) `cartesianProduct`
-                      param_))
-    if null his then return False else
-          if any
-             (\x ->
-                   Data.Rewriting.Term.root (fst x) `elem` hrs)
-             his then return True else
-            do
-             b <- (fmap or . mapM --anyM
-               (\x ->
-                     isFunctionSymbolRecursive_
-                         f
-                         (Data.Rewriting.Term.root (fst x) : hrs)
-                         x))
-               his
-             return (b && not (null his))
+    his <-
+        mapMaybeM
+            (\(x,y) -> do
+                 sub <- unify' x (fst y) --TODO: save state at beginning of this function and restore it at the end
+                 if isJust sub
+                     then return
+                              (Just
+                                   ((apply (fromJust sub) ***
+                                     fmap (apply (fromJust sub)))
+                                        y))
+                     else return Nothing)
+            (filter
+                 (\(x,y) ->
+                       Data.Rewriting.Term.root x ==
+                       Data.Rewriting.Term.root (fst y))
+                 (maybe [] getMetaPredications (snd c) `cartesianProduct`
+                  param_))
+    if null his
+        then return False
+        else if any
+                    (\x ->
+                          Data.Rewriting.Term.root (fst x) `elem` hrs)
+                    his
+                 then return True
+                 else do
+                     b <-
+                         (fmap or .
+                          mapM --anyM
+                              (\x ->
+                                    isFunctionSymbolRecursive_
+                                        f
+                                        (Data.Rewriting.Term.root (fst x) : hrs)
+                                        x))
+                             his
+                     return (b && not (null his))
 
 cartesianProduct :: [a] -> [b] -> [(a, b)]
 cartesianProduct xs ys =
