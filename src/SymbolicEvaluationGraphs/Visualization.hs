@@ -6,9 +6,9 @@ import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities (splitClauseBody)
 import SymbolicEvaluationGraphs.Heuristic (getInstanceCandidates)
 import Data.Rewriting.Substitution (unify, apply)
-import Data.Rewriting.Substitution.Type (toMap)
+import Data.Rewriting.Substitution.Type (toMap, fromMap)
 import Data.Rewriting.Term (vars)
-import Data.Map (toList)
+import Data.Map (toList, fromList)
 import Data.Maybe
 import Data.List (nubBy, nub, (\\))
 import Data.Function (on)
@@ -68,8 +68,22 @@ printSymbolicEvaluationGraph t =
                          extentY .
                          fst)
                         (fmap
-                             (\s ->
-                                   let t = printAbstractState (fst s)
+                             (\s -> 
+                                   let t =
+                                           printAbstractState
+                                               (fst
+                                                    ((if snd s ==
+                                                         "instanceChild"
+                                                          then (\(([(t,_,c)],g),r) ->
+                                                                     ( ( [ ( t
+                                                                           , fromMap
+                                                                                 (fromList
+                                                                                      [])
+                                                                           , c)]
+                                                                       , g)
+                                                                     , r))
+                                                          else id)
+                                                         s))
                                    in ( t `atop`
                                         rect
                                             (width t + (height t * 1.8))
@@ -138,7 +152,7 @@ showTermWithG (Var v) g =
         then "^" ++ v
         else v
 
-showSubst' :: Subst' -> String -- TODO: if instanceChild: don't display sub
+showSubst' :: Subst' -> String
 showSubst' sub =
     if null ls
         then ""
