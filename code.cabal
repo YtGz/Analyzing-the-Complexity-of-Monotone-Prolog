@@ -19,7 +19,7 @@ executable code
   main-is:             Main.hs
   -- other-modules:
   other-extensions:    FlexibleContexts, FlexibleInstances, Rank2Types, UndecidableInstances, ImplicitParams
-  build-depends:       base >=4.8 && <4.9, parsec, bytestring, containers, mtl, multiset >= 0.2 && < 0.3, ansi-wl-pprint, array, union-find-array, implicit-params, data-default-class, reflection, diagrams-svg, diagrams-lib, diagrams-contrib, SVGFonts, MissingH, rosezipper, mmorph
+  build-depends:       base >=4.8 && <4.9, parsec, bytestring, containers, mtl, multiset >= 0.2 && < 0.3, ansi-wl-pprint, array, union-find-array, implicit-params, data-default-class, reflection, diagrams-svg, diagrams-lib, diagrams-contrib, SVGFonts, MissingH, rosezipper, mmorph, monad-extras
   hs-source-dirs:      src, lib/parsec-prolog/src, lib/term-rewriting/src
   default-language:    Haskell2010
   ghc-options:         -fno-cse -fno-full-laziness

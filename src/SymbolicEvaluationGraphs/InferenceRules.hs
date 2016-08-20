@@ -278,6 +278,7 @@ tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) (([(qs',_,c')],(g',u')):xs) =
                               then Just ([(qs',fromJust (head mu),c')],(g',u'))
                               else tryToApplyInstanceRule n xs
                   else tryToApplyInstanceRule n xs
+tryToApplyInstanceRule n (_:xs) = tryToApplyInstanceRule n xs
 
 parallel :: AbstractState -> (AbstractState, AbstractState)
 parallel (ss,kb) = (([head ss], kb), (tail ss, kb))
