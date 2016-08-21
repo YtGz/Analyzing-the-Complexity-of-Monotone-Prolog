@@ -32,3 +32,33 @@ encodeOut _ = error "Cannot encode abstract state: multiple goals."
 nextGOnQuery :: [Term'] -> G -> IO G
 nextGOnQuery [] g = return g
 nextGOnQuery (x:xs) g = nextGOnQuery xs =<< nextG x g
+
+connectionPathStartNodes :: BTree (AbstractState, String)
+                         -> [BTree (AbstractState, String)]
+connectionPathStartNodes graph =
+    filter (\x -> case x of BNode {} -> True
+                            Empty -> False)
+    (graph :
+    fix
+        (\f n ->
+              case n of
+                  BNode x l r
+                    | snd x == "instance" -> l : f l ++ f r
+                    | snd x == "split" -> l : r : f l ++ f r
+                    | otherwise -> []
+                  Empty -> [])
+        graph)
+
+connectionPathStartAndEndStates :: BTree (AbstractState, String) -> [((AbstractState, String),(AbstractState, String))]
+connectionPathStartAndEndStates graph = concatMap (\x@(BNode y _ _) -> map (\x -> (y,x)) (connectionPathEndStates x)) (connectionPathStartNodes graph)
+
+connectionPathEndStates
+    :: BTree (AbstractState, String) -> [(AbstractState, String)]
+connectionPathEndStates Empty = []
+connectionPathEndStates (BNode x l r) =
+    if any
+           (\y ->
+                 snd x == y)
+           ["instance", "split", "suc"]
+        then [x]
+        else [] ++ connectionPathEndStates l ++ connectionPathEndStates r
