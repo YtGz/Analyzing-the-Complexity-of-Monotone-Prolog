@@ -12,6 +12,7 @@ import           SymbolicEvaluationGraphs.Utilities
 import           SymbolicEvaluationGraphs.InferenceRules
 import           SymbolicEvaluationGraphs.Visualization
 import           SymbolicEvaluationGraphs.Heuristic
+import           TRS.Encoding
 import           Data.Maybe
 import           Data.Map
 
@@ -89,10 +90,15 @@ import           Data.Map
       let o = getInitialAbstractState (head (getQueryClasses exprs)) in
         printSymbolicEvaluationGraph (applyRules o)-}
 
+{-main = do
+      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
+      graph <- generateSymbolicEvaluationGraph (head (getQueryClasses exprs))
+      printSymbolicEvaluationGraph graph-}
+
 main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
       graph <- generateSymbolicEvaluationGraph (head (getQueryClasses exprs))
-      printSymbolicEvaluationGraph graph
+      printArrayLineByLine (connectionPathStartAndEndStates graph)
 
 {-main = print
         (tryToApplyInstanceRule_

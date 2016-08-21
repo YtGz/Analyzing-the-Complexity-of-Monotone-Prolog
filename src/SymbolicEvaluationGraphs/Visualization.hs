@@ -20,20 +20,20 @@ import Graphics.SVGFonts
 
 --TODO: draw dashed arrows to instance father for instance rule
 printSymbolicEvaluationGraph
-    :: BTree (AbstractState, String) -> IO ()
+    :: BTree (AbstractState, (String, Int)) -> IO ()
 printSymbolicEvaluationGraph t =
     mainWith
         ((renderTree'
               fst
               (\((n,s),p1) ((_,s'),p2) ->
-                    let rule = write (snd s)
+                    let rule = write (fst (snd s))
                         additionToU =
-                            if snd s == "eval" && fst (unp2 p2) >=
+                            if fst (snd s) == "eval" && fst (unp2 p2) >=
                                fst (unp2 p1)
                                 then write (getAdditionToU (fst s))
                                 else write ""
                         mu =
-                            if snd s' == "instanceChild"
+                            if fst (snd s') == "instanceChild"
                                 then write
                                          (showSubst'
                                               ((\(_,mu,_) ->
@@ -68,11 +68,11 @@ printSymbolicEvaluationGraph t =
                          extentY .
                          fst)
                         (fmap
-                             (\s -> 
+                             (\s ->
                                    let t =
                                            printAbstractState
                                                (fst
-                                                    ((if snd s ==
+                                                    ((if fst (snd s) ==
                                                          "instanceChild"
                                                           then (\(([(t,_,c)],g),r) ->
                                                                      ( ( [ ( t

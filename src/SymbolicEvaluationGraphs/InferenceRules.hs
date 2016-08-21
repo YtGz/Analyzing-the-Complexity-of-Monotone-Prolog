@@ -8,6 +8,7 @@ import qualified Data.Map
        (elems, filter, filterWithKey, fromList, union)
 import Control.Arrow
 import Control.Monad (join)
+import Control.Monad.Supply
 import qualified Control.Monad.State
 import Control.Monad.Identity
 import Data.Implicit
@@ -195,7 +196,7 @@ arityOfRootSymbol (Fun _ xs) = length xs
 -- split rule for states with a single goal
 split
     :: AbstractState
-    -> Control.Monad.State.StateT Int IO (AbstractState, AbstractState)
+    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) (AbstractState, AbstractState)
 split ([(t:qs,sub,Nothing)],(g,u)) = do
     let vs =
             map
@@ -207,7 +208,7 @@ split ([(t:qs,sub,Nothing)],(g,u)) = do
     freshVariables <- mapFreshVariables (return vs)
     let d = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
     g' <-
-        Control.Monad.State.lift
+        Control.Monad.State.liftIO
             (nextG t g >>=
              (\x ->
                    return (g `union` map (apply d) x)))
@@ -252,9 +253,11 @@ groundnessAnalysis f groundInputs = do
 
 -- contrary to the usual substitution labels, the instance child is annotated by the substitution mu associated to the instance father
 tryToApplyInstanceRule
-    :: AbstractState -> [AbstractState] -> Maybe AbstractState
+    :: AbstractState
+    -> [(AbstractState, (String, Int))]
+    -> Maybe (AbstractState, (String, Int))
 tryToApplyInstanceRule _ [] = Nothing
-tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) (([(qs',_,c')],(g',u')):xs) =
+tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) ((([(qs',_,c')],(g',u')),(r,i)):xs) =
     if c == c' && length qs == length qs'
         then let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
              in if length mu == 1 &&
@@ -271,7 +274,9 @@ tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) (([(qs',_,c')],(g',u')):xs) =
                    null
                        (map (join bimap (apply (fromJust (head mu)))) (nub u') \\
                         nub u)
-                    then Just ([(qs', fromJust (head mu), c')], (g', u'))
+                    then Just
+                             ( ([(qs', fromJust (head mu), c')], (g', u'))
+                             , ("instanceChild", i))
                     else tryToApplyInstanceRule n xs
         else tryToApplyInstanceRule n xs
 tryToApplyInstanceRule n (_:xs) = tryToApplyInstanceRule n xs

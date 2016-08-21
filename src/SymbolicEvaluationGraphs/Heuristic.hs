@@ -11,6 +11,7 @@ import Control.Arrow ((***))
 import Control.Monad.State
 import Control.Monad.Extra (mapMaybeM)
 import Control.Monad.Morph
+import Control.Monad.Supply
 import Data.Either.Utils
 import Data.Tree.Zipper
 import ExprToTerm.Conversion
@@ -35,13 +36,17 @@ maxBranchingFactor :: Int
 maxBranchingFactor = 4
 
 generateSymbolicEvaluationGraph :: QueryClass
-                                -> IO (BTree (AbstractState, String))
+                                -> IO (BTree (AbstractState, (String, Int)))
 generateSymbolicEvaluationGraph queryClass = do
     tp <-
-        evalStateT
-            (do initialState <- getInitialAbstractState queryClass
-                applyRule (return (fromTree (Node (initialState, "") []))) 0)
-            0
+        evalSupplyT
+            (evalStateT
+                 (do initialState <- getInitialAbstractState queryClass
+                     applyRule
+                         (return (fromTree (Node (initialState, ("", 0)) [])))
+                         0)
+                 0)
+            [0 ..]
     return (roseTreeToBTree (toTree tp))
 
 type TreePath a = [TreePos Full a -> TreePos Full a]
@@ -82,14 +87,14 @@ getInitialAbstractState (f,m) = do
     return ([([Fun f vs], fromMap (fromList []), Nothing)], (gs, []))
 
 applyRule
-    :: IO (TreePos Full (AbstractState, String))
+    :: IO (TreePos Full (AbstractState, (String, Int)))
     -> Int
-    -> Control.Monad.State.StateT Int IO (TreePos Full (AbstractState, String))
+    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) (TreePos Full (AbstractState, (String, Int)))
 applyRule ioTp n = do
-    tp <- Control.Monad.State.lift ioTp
+    tp <- Control.Monad.State.liftIO ioTp
     let s = fst (label tp)
     let ss =
-            eval s :: Control.Monad.State.State Int (AbstractState, AbstractState)
+            eval s :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) (AbstractState, AbstractState)
         s0 = do
             e <- ss
             return (fst e)
@@ -109,29 +114,27 @@ applyRule ioTp n = do
         i =
             case s of
                 ((t:_,_,_):_,_) -> do
+                    j <-
+                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
                     let newTp =
                             modifyLabel
                                 (\(x,_) ->
-                                      (x, "instance"))
+                                      (x, ("instance", j)))
                                 tp
                     instanceCandidates <-
-                        getInstanceCandidates
-                            (label tp)
-                            (roseTreeToBTree (toTree newTp))
-                    let inst =
-                            tryToApplyInstanceRule
-                                s
-                                (map fst instanceCandidates)
+                        hoist
+                            generalize
+                            (getInstanceCandidates
+                                 (label tp)
+                                 (roseTreeToBTree (toTree newTp)))
+                    let inst = tryToApplyInstanceRule s instanceCandidates
                     if isJust inst
                         then return
                                  (Just
                                       (fst
                                            (insertAndMoveToChild
                                                 newTp
-                                                ( Just
-                                                      ( fromJust inst
-                                                      , "instanceChild")
-                                                , Nothing))))
+                                                (inst, Nothing))))
                         else return Nothing
                 _ -> return Nothing
         b0 x' y = do
@@ -162,20 +165,31 @@ applyRule ioTp n = do
         cs0 = do
             s0' <- s0
             s1' <- s1
-            return (insertAndMoveToChild tp (Just (s0', ""), Just (s1', "")))
+            return
+                (insertAndMoveToChild
+                     tp
+                     (Just (s0', ("", -1)), Just (s1', ("", -1))))
         cs1 = do
             sp0' <- sp0
             sp1' <- sp1
-            return (insertAndMoveToChild tp (Just (sp0', ""), Just (sp1', "")))
-        cs2 = insertAndMoveToChild tp (Just (par0, ""), Just (par1, ""))
+            return
+                (insertAndMoveToChild
+                     tp
+                     (Just (sp0', ("", -1)), Just (sp1', ("", -1))))
+        cs2 =
+            insertAndMoveToChild
+                tp
+                (Just (par0, ("", -1)), Just (par1, ("", -1)))
         e = do
-            cs0' <- hoist generalize cs0
+            cs0' <- cs0
+            j <-
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
             l <-
                 b0
                     (return
                          (modifyLabel
                               (\(x,_) ->
-                                    (x, "eval"))
+                                    (x, ("eval", j)))
                               tp))
                     cs0'
             let tp =
@@ -185,12 +199,14 @@ applyRule ioTp n = do
             b1 l tp
         sp = do
             cs1' <- cs1
+            j <-
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
             l <-
                 b0
                     (return
                          (modifyLabel
                               (\(x,_) ->
-                                    (x, "split"))
+                                    (x, ("split", j)))
                               tp))
                     cs1'
             let tp =
@@ -199,12 +215,14 @@ applyRule ioTp n = do
                         (Data.Tree.Zipper.last (children l))
             b1 l tp
         par = do
+            j <-
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
             l <-
                 b0
                     (return
                          (modifyLabel
                               (\(x,_) ->
-                                    (x, "parallel"))
+                                    (x, ("parallel", j)))
                               tp))
                     cs2
             let tp =
@@ -212,16 +230,18 @@ applyRule ioTp n = do
                         (tree (snd cs2))
                         (Data.Tree.Zipper.last (children l))
             b1 l tp
-        c =
+        c = do
+            j <-
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
             applyRule
                 (return
                      (fst
                           (insertAndMoveToChild
                                (modifyLabel
                                     (\(x,_) ->
-                                          (x, "case"))
+                                          (x, ("case", j)))
                                     tp)
-                               (Just (caseRule s, ""), Nothing))))
+                               (Just (caseRule s, ("", -1)), Nothing))))
                 (n + 1)
     case s of
         ([],_) ->
@@ -230,19 +250,21 @@ applyRule ioTp n = do
                      (insertAndMoveToChild
                           (modifyLabel
                                (\(x,_) ->
-                                     (x, ""))
+                                     (x, ("", -1)))
                                tp)
                           (Nothing, Nothing)))
-        (([],_,_):_,_) ->
+        (([],_,_):_,_) -> do
+            j <-
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
             applyRule
                 (return
                      (fst
                           (insertAndMoveToChild
                                (modifyLabel
                                     (\(x,_) ->
-                                          (x, "suc"))
+                                          (x, ("suc", j)))
                                     tp)
-                               (Just (suc s, ""), Nothing))))
+                               (Just (suc s, ("", -1)), Nothing))))
                 n
         _ ->
             if isJust
@@ -250,16 +272,19 @@ applyRule ioTp n = do
                           x)
                         (head (fst s))) &&
                isBacktrackingApplicable s
-                then applyRule
-                         (return
-                              (fst
-                                   (insertAndMoveToChild
-                                        (modifyLabel
-                                             (\(x,_) ->
-                                                   (x, "backtrack"))
-                                             tp)
-                                        (Just (backtrack s, ""), Nothing))))
-                         n
+                then do
+                    j <-
+                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
+                    applyRule
+                        (return
+                             (fst
+                                  (insertAndMoveToChild
+                                       (modifyLabel
+                                            (\(x,_) ->
+                                                  (x, ("backtrack", j)))
+                                            tp)
+                                       (Just (backtrack s, ("", -1)), Nothing))))
+                        n
                 else do
                     b <-
                         case s of
@@ -283,7 +308,7 @@ applyRule ioTp n = do
                         then if length (fst s) > 1
                                  then par
                                  else do
-                                     i' <- hoist generalize i
+                                     i' <- i
                                      maybe
                                          (case s of
                                               (([_],_,Nothing):_,_) -> c
@@ -296,9 +321,9 @@ applyRule ioTp n = do
                                  _ -> e
 
 insertAndMoveToChild
-    :: TreePos Full (AbstractState, String)
-    -> (Maybe (AbstractState, String), Maybe (AbstractState, String))
-    -> (TreePos Full (AbstractState, String), TreePos Full (AbstractState, String))
+    :: TreePos Full (AbstractState, (String, Int))
+    -> (Maybe (AbstractState, (String, Int)), Maybe (AbstractState, (String, Int)))
+    -> (TreePos Full (AbstractState, (String, Int)), TreePos Full (AbstractState, (String, Int)))
 insertAndMoveToChild tp (l,r) =
     if not (isLeaf tp)
         then error "Can only insert a new element at a leaf of the tree."
@@ -329,9 +354,9 @@ insertAndMoveToChild tp (l,r) =
             tp
 
 getInstanceCandidates
-    :: (AbstractState, String)
-    -> BTree (AbstractState, String)
-    -> Control.Monad.State.State Int [(AbstractState, String)]
+    :: (AbstractState, (String, Int))
+    -> BTree (AbstractState, (String, Int))
+    -> Control.Monad.State.State Int [(AbstractState, (String, Int))]
 getInstanceCandidates node graph = do
     isRecursive <-
         isFunctionSymbolRecursive
@@ -343,7 +368,7 @@ getInstanceCandidates node graph = do
     return
         (filter
              (\x ->
-                   snd x /= "instance" &&
+                   fst (snd x) /= "instance" &&
                    (getVarNum (fst node) >= getVarNum (fst x) ||
                     (isNothing
                          ((\(_,_,x) ->
@@ -361,7 +386,7 @@ getInstanceCandidates node graph = do
                      branchingFactor (nodeHead node) > maxBranchingFactor)))
              (toList graph))
 
-nodeHead :: (AbstractState, String) -> Term'
+nodeHead :: (AbstractState, (String, Int)) -> Term'
 nodeHead (((t:_,_,Nothing):_,_),_) =
     Fun (fromRight (Data.Rewriting.Term.root t)) []
 nodeHead _ = error "Abstract State is annotated with a clause."
