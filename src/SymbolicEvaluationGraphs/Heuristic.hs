@@ -19,7 +19,7 @@ import Query.Utilities
 import Data.Rewriting.Term (vars)
 import Data.Rewriting.Term.Type (Term(..))
 import Data.Rewriting.Substitution (unify, apply)
-import Data.Rewriting.Substitution.Type (toMap, fromMap)
+import Data.Rewriting.Substitution.Type (fromMap)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,

@@ -4,7 +4,7 @@ module Main where
 import           System.Environment
 import           Language.Prolog.Parser
 import           Query.Utilities
-import           Data.Rewriting.Substitution (Subst, GSubst, unify, apply)
+import           Data.Rewriting.Substitution (Subst, GSubst, unify, apply, compose)
 import qualified Data.Rewriting.Substitution.Type as Subst
 import           Data.Rewriting.Term.Type                (Term (..))
 import           SymbolicEvaluationGraphs.Types
@@ -98,7 +98,8 @@ import           Data.Map
 main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
       graph <- generateSymbolicEvaluationGraph (head (getQueryClasses exprs))
-      printArrayLineByLine (connectionPathStartAndEndStates graph)
+      rules <- generateRewriteRules graph
+      printArrayLineByLine rules
 
 {-main = print
         (tryToApplyInstanceRule_
@@ -126,6 +127,12 @@ main = do
 -- main = print (show (freshVariable (Var "")) ++ show (freshVariable (Var ""))) -- the two fresh variables should be distinct
 
 --main = print (isFunctionSymbolRecursive (Fun "q" []))
+
+{-main = print (theta `subDif` (sigma `compose` theta)) >>
+       putStrLn "" >>
+       print sigma
+  where theta = Subst.fromMap (fromList [("T0", Fun "s" [Var "T5"]), ("T1", Var "T2")])
+        sigma = Subst.fromMap (fromList [("T5", Fun "f" [Var "T7"]), ("T2", Var "T4")])-}
 
 --main = printArrayLineByLine (getMetaPredicates (Fun "," [Var "p", Fun ";" [Fun "f" [Fun "," [Var "r", Var "r"]], Var "q"]]))
 
