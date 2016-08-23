@@ -4,7 +4,7 @@ import Control.Monad.State
 import SymbolicEvaluationGraphs.Types (AbstractState, G)
 import SymbolicEvaluationGraphs.InferenceRules (nextG)
 import ExprToTerm.Conversion (Term', Subst', Rule')
-import Data.List (intersect, union)
+import Data.List (intersect, union, nubBy)
 import Data.Map (difference, fromList, toList, intersectionWith)
 import qualified Data.Map (filter)
 import Data.Maybe (fromJust)
@@ -42,53 +42,56 @@ connectionPathStartNodes :: BTree (AbstractState, (String, Int))
                          -> [BTree (AbstractState, (String, Int))]
 connectionPathStartNodes graph =
     let iCs = instanceChildren graph
-    in filter
-           (\x ->
-                 case x of
-                     BNode{} -> True
-                     Empty -> False)
-           (graph :
-            fix
-                (\f n ->
-                      case n of
-                          BNode x l r
-                            | fst (snd x) == "instance" ->
-                                let instanceChild =
-                                        head
-                                            (filter
-                                                 (\(BNode (_,(_,i)) _ _) ->
-                                                       i ==
-                                                       (\(BNode (_,(_,i)) _ _) ->
-                                                             i)
-                                                           l)
-                                                 iCs)
-                                in [ instanceChild
-                                   | fst
-                                        (snd
-                                             ((\(BNode x _ _) ->
-                                                    x)
-                                                  instanceChild)) `notElem`
-                                         ["instance", "split"] ] ++
-                                   f l ++ f r
-                            | fst (snd x) == "split" ->
-                                [ l
-                                | fst
-                                     (snd
-                                          ((\(BNode x _ _) ->
-                                                 x)
-                                               l)) `notElem`
-                                      ["instance", "split"] ] ++
-                                [ r
-                                | fst
-                                     (snd
-                                          ((\(BNode x _ _) ->
-                                                 x)
-                                               r)) `notElem`
-                                      ["instance", "split"] ] ++
-                                f l ++ f r
-                            | otherwise -> f l ++ f r
-                          Empty -> [])
-                graph)
+    in nubBy
+           (\(BNode (_,(_,i)) _ _) (BNode (_,(_,j)) _ _) ->
+                 i == j)
+           (filter
+                (\x ->
+                      case x of
+                          BNode{} -> True
+                          Empty -> False)
+                (graph :
+                 fix
+                     (\f n ->
+                           case n of
+                               BNode x l r
+                                 | fst (snd x) == "instance" ->
+                                     let instanceChild =
+                                             head
+                                                 (filter
+                                                      (\(BNode (_,(_,i)) _ _) ->
+                                                            i ==
+                                                            (\(BNode (_,(_,i)) _ _) ->
+                                                                  i)
+                                                                l)
+                                                      iCs)
+                                     in [ instanceChild
+                                        | fst
+                                             (snd
+                                                  ((\(BNode x _ _) ->
+                                                         x)
+                                                       instanceChild)) `notElem`
+                                              ["instance", "split"] ] ++
+                                        f l ++ f r
+                                 | fst (snd x) == "split" ->
+                                     [ l
+                                     | fst
+                                          (snd
+                                               ((\(BNode x _ _) ->
+                                                      x)
+                                                    l)) `notElem`
+                                           ["instance", "split"] ] ++
+                                     [ r
+                                     | fst
+                                          (snd
+                                               ((\(BNode x _ _) ->
+                                                      x)
+                                                    r)) `notElem`
+                                           ["instance", "split"] ] ++
+                                     f l ++ f r
+                                 | otherwise -> f l ++ f r
+                               Empty -> [])
+                     graph))
 
 connectionPathStartAndEndNodes
     :: BTree (AbstractState, (String, Int))
@@ -104,11 +107,12 @@ connectionPathStartAndEndNodes graph =
            (connectionPathStartNodes graph)
 
 connectionPathEndNodes
-   :: [BTree (AbstractState, (String, Int))]
-   -> BTree (AbstractState, (String, Int))
-   -> [BTree (AbstractState, (String, Int))]
+    :: [BTree (AbstractState, (String, Int))]
+    -> BTree (AbstractState, (String, Int))
+    -> [BTree (AbstractState, (String, Int))]
 connectionPathEndNodes _ Empty = error "Empty start node."
-connectionPathEndNodes iCs (BNode _ l r) = connectionPathEndNodes_ iCs l ++ connectionPathEndNodes_ iCs r
+connectionPathEndNodes iCs (BNode _ l r) =
+    connectionPathEndNodes_ iCs l ++ connectionPathEndNodes_ iCs r
 
 connectionPathEndNodes_
     :: [BTree (AbstractState, (String, Int))]

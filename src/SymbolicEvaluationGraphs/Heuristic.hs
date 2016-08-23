@@ -358,31 +358,32 @@ getInstanceCandidates
     -> BTree (AbstractState, (String, Int))
     -> Control.Monad.State.State Int [(AbstractState, (String, Int))]
 getInstanceCandidates node graph = do
-    isRecursive <-
-        isFunctionSymbolRecursive
-            (nodeHead node)
-            (arityOfRootSymbol
-                 ((\(((t:_,_,Nothing):_,_),_) ->
-                        t)
-                      node))
+    isRecursive <- 
+        if isNothing
+               ((\(_,_,x) ->
+                      x)
+                    (head (fst (fst node)))) &&
+           (\x ->
+                 case x of
+                     (Right _) -> True
+                     _ -> False)
+               (Data.Rewriting.Term.root
+                    ((\(((t:_,_,_):_,_),_) ->
+                           t)
+                         node))
+            then isFunctionSymbolRecursive
+                     (nodeHead node)
+                     (arityOfRootSymbol
+                          ((\(((t:_,_,Nothing):_,_),_) ->
+                                 t)
+                               node))
+            else return False
     return
         (filter
              (\x ->
                    fst (snd x) /= "instance" &&
                    (getVarNum (fst node) >= getVarNum (fst x) ||
-                    (isNothing
-                         ((\(_,_,x) ->
-                                x)
-                              (head (fst (fst node)))) &&
-                     (\x ->
-                           case x of
-                               (Right _) -> True
-                               _ -> False)
-                         (Data.Rewriting.Term.root
-                              ((\(((t:_,_,_):_,_),_) ->
-                                     t)
-                                   node)) &&
-                     isRecursive &&
+                    (isRecursive &&
                      branchingFactor (nodeHead node) > maxBranchingFactor)))
              (toList graph))
 
