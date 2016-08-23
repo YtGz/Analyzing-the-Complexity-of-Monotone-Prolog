@@ -86,7 +86,7 @@ connectionPathStartNodes graph =
                                                r)) `notElem`
                                       ["instance", "split"] ] ++
                                 f l ++ f r
-                            | otherwise -> []
+                            | otherwise -> f l ++ f r
                           Empty -> [])
                 graph)
 
@@ -104,11 +104,18 @@ connectionPathStartAndEndNodes graph =
            (connectionPathStartNodes graph)
 
 connectionPathEndNodes
+   :: [BTree (AbstractState, (String, Int))]
+   -> BTree (AbstractState, (String, Int))
+   -> [BTree (AbstractState, (String, Int))]
+connectionPathEndNodes _ Empty = error "Empty start node."
+connectionPathEndNodes iCs (BNode _ l r) = connectionPathEndNodes_ iCs l ++ connectionPathEndNodes_ iCs r
+
+connectionPathEndNodes_
     :: [BTree (AbstractState, (String, Int))]
     -> BTree (AbstractState, (String, Int))
     -> [BTree (AbstractState, (String, Int))]
-connectionPathEndNodes iCs Empty = []
-connectionPathEndNodes iCs n@(BNode x l r)
+connectionPathEndNodes_ iCs Empty = []
+connectionPathEndNodes_ iCs n@(BNode x l r)
   | any
        (\y ->
              fst (snd x) == y)
@@ -119,8 +126,8 @@ connectionPathEndNodes iCs n@(BNode x l r)
             iCs =
       [n]
   | fst (snd x) == "suc" =
-      [n] ++ connectionPathEndNodes iCs l ++ connectionPathEndNodes iCs r
-  | otherwise = connectionPathEndNodes iCs l ++ connectionPathEndNodes iCs r
+      [n] ++ connectionPathEndNodes_ iCs l ++ connectionPathEndNodes_ iCs r
+  | otherwise = connectionPathEndNodes_ iCs l ++ connectionPathEndNodes_ iCs r
 
 instanceChildren :: BTree (AbstractState, (String, Int))
                  -> [BTree (AbstractState, (String, Int))]
