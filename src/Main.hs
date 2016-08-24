@@ -13,13 +13,13 @@ import           SymbolicEvaluationGraphs.InferenceRules
 import           SymbolicEvaluationGraphs.Visualization
 import           SymbolicEvaluationGraphs.Heuristic
 import           TRS.Encoding
+import           TRS.TPDB
 import           Data.Maybe
 import           Data.Map
 import qualified Data.List
 import           Control.Monad.State
-import qualified Text.PrettyPrint.ANSI.Leijen as P (text, putDoc, (<>), empty, linebreak)
+import qualified Text.PrettyPrint.ANSI.Leijen as P (text, putDoc, vcat)
 import           Data.Rewriting.Rule.Pretty
-import ExprToTerm.Conversion
 
 --main = print (suc ([(Hole, "")],([AVar "T1", AVar "T2"],[])))
 
@@ -99,11 +99,17 @@ import ExprToTerm.Conversion
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
       printSymbolicEvaluationGraph =<< evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) empty-}
 
+{-main = do
+      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
+      rewriteRules <- evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs)) >>=
+        generateRewriteRules) Data.Map.empty
+      P.putDoc (P.vcat (Data.List.map (prettyRule (P.text "->") P.text P.text) rewriteRules))-}
+
 main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
       rewriteRules <- evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs)) >>=
         generateRewriteRules) Data.Map.empty
-      P.putDoc (Data.List.foldr ((P.<>) . (P.<>) P.linebreak . prettyRule (P.text "->") P.text P.text) P.empty rewriteRules)
+      printInTPDBFormat rewriteRules
 
 {-main = print
         (tryToApplyInstanceRule_
