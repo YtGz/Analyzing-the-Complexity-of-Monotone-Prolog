@@ -5,7 +5,7 @@ module SymbolicEvaluationGraphs.InferenceRules where
 import Data.Maybe
 import Data.List
 import qualified Data.Map
-       (elems, filter, filterWithKey, fromList, union, keys)
+       (Map, elems, filter, filterWithKey, fromList, union, keys, insert, member, lookup)
 import Control.Arrow
 import Control.Monad (join)
 import Control.Monad.Supply
@@ -163,7 +163,7 @@ arityOfRootSymbol (Fun _ xs) = length xs
 -- split rule for states with a single goal
 split
     :: AbstractState
-    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) (AbstractState, AbstractState)
+    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) (AbstractState, AbstractState)
 split ([(t:qs,sub,Nothing)],(g,u)) = do
     let vs =
             map
@@ -175,15 +175,15 @@ split ([(t:qs,sub,Nothing)],(g,u)) = do
     freshVariables <- mapFreshVariables (return vs)
     let d = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
     g' <-
-        Control.Monad.State.liftIO
+        Control.Monad.State.lift (Control.Monad.State.lift
             (nextG t g >>=
              (\x ->
-                   return (g `union` map (apply d) x)))
+                   return (g `union` map (apply d) x))))
     return
         ( ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
         , ([(map (apply d) qs, d, Nothing)], (g', map (apply d *** apply d) u)))
 
-nextG :: Term' -> G -> IO G
+nextG :: Term' -> G -> (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO) G
 nextG t g = do
     let gPos =
             filter
@@ -213,12 +213,19 @@ nextG t g = do
 
 -- groundness analysis (dependent on user input)
 groundnessAnalysis
-    :: String -> Int -> [Int] -> IO [Int]
+    :: String -> Int -> [Int] -> Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO [Int]
 groundnessAnalysis f arity groundInputs = do
-    putStrLn "groundness analysis required:"
-    putStrLn ("function symbol: '" ++ f ++ "'" ++ "   arity: " ++ show arity ++ "   ground argument positions: " ++ show groundInputs)
-    putStrLn "argument positions that will become ground for every answer substitution?"
-    readLn :: IO [Int]
+  cachedResults <- Control.Monad.State.get
+  if (f,arity,groundInputs) `Data.Map.member` cachedResults then
+    return (fromJust (Data.Map.lookup (f,arity,groundInputs) cachedResults))
+  else do
+    groundOutputs <- Control.Monad.State.lift (do
+      putStrLn "groundness analysis required:"
+      putStrLn ("function symbol: '" ++ f ++ "'" ++ "   arity: " ++ show arity ++ "   ground argument positions: " ++ show groundInputs)
+      putStrLn "argument positions that will become ground for every answer substitution?"
+      readLn :: IO [Int])
+    Control.Monad.State.modify (Data.Map.insert (f,arity,groundInputs) groundOutputs)
+    return groundOutputs
 
 -- contrary to the usual substitution labels, the instance child is annotated by the substitution mu associated to the instance father
 tryToApplyInstanceRule

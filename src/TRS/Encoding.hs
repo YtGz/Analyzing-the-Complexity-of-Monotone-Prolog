@@ -5,7 +5,7 @@ import SymbolicEvaluationGraphs.Types (AbstractState, G)
 import SymbolicEvaluationGraphs.InferenceRules (nextG)
 import ExprToTerm.Conversion (Term', Subst', Rule')
 import Data.List (intersect, union, nub, nubBy)
-import Data.Map (difference, fromList, toList, intersectionWith)
+import Data.Map (Map, difference, fromList, toList, intersectionWith)
 import qualified Data.Map (filter)
 import Data.Maybe (fromJust)
 import Control.Monad.Morph
@@ -15,9 +15,9 @@ import Data.Rewriting.Substitution.Type (toMap, fromMap)
 import Data.Rewriting.Rule (Rule(..))
 import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 
-generateRewriteRules :: BTree (AbstractState, (String, Int)) -> IO [Rule']
+generateRewriteRules :: BTree (AbstractState, (String, Int)) -> Control.Monad.State.StateT (Map (String,Int,[Int]) [Int]) IO [Rule']
 generateRewriteRules graph =
-    liftM2 (++) (encodeConnectionPaths graph) (encodeSplitRules graph)
+  liftM2 (++) (encodeConnectionPaths graph) (encodeSplitRules graph)
 
 encodeIn :: BTree (AbstractState, (String, Int)) -> Term'
 encodeIn (BNode (([(_,_,_)],_),("instance",_)) l@(BNode (([(ts,mu,_)],(g,_)),("instanceChild",i)) Empty Empty) _) =
@@ -26,7 +26,7 @@ encodeIn (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) =
     Fun ("fin_s" ++ show i) (nub (concatMap (map Var . vars) ts) `intersect` g)
 encodeIn _ = error "Cannot encode abstract state: multiple goals."
 
-encodeOut :: BTree (AbstractState, (String, Int)) -> IO Term'
+encodeOut :: BTree (AbstractState, (String, Int)) -> Control.Monad.State.StateT (Map (String,Int,[Int]) [Int]) IO Term'
 encodeOut (BNode (([(ts,_,_)],(g,_)),("instance",_)) l@(BNode (([(_,mu,_)],_),("instanceChild",_)) Empty Empty) _) =
     fmap (apply mu) (encodeOut l)
 encodeOut (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) = do
@@ -34,7 +34,7 @@ encodeOut (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) = do
     return (Fun ("fout_s" ++ show i) gOut)
 encodeOut _ = error "Cannot encode abstract state: multiple goals."
 
-nextGOnQuery :: [Term'] -> G -> IO G
+nextGOnQuery :: [Term'] -> G -> Control.Monad.State.StateT (Map (String,Int,[Int]) [Int]) IO G
 nextGOnQuery [] g = return g
 nextGOnQuery (x:xs) g = nextGOnQuery xs =<< nextG x g
 
@@ -185,7 +185,7 @@ unifiersAppliedOnPath
 unifiersAppliedOnPath (BNode (([(_,t,_)],_),_) _ _,BNode (((_,s,_):_,_),_) _ _) =
     subDif t s
 
-encodeConnectionPaths :: BTree (AbstractState, (String, Int)) -> IO [Rule']
+encodeConnectionPaths :: BTree (AbstractState, (String, Int)) -> Control.Monad.State.StateT (Map (String,Int,[Int]) [Int]) IO [Rule']
 encodeConnectionPaths graph =
     fmap
         concat
@@ -193,7 +193,7 @@ encodeConnectionPaths graph =
 
 encodeConnectionPath
     :: (BTree (AbstractState, (String, Int)), BTree (AbstractState, (String, Int)))
-    -> IO [Rule']
+    -> Control.Monad.State.StateT (Map (String,Int,[Int]) [Int]) IO [Rule']
 encodeConnectionPath (s,e) =
     if fst
            (snd
@@ -222,7 +222,7 @@ encodeConnectionPath (s,e) =
   where
     sub = unifiersAppliedOnPath (s, e)
 
-encodeSplitRules :: BTree (AbstractState, (String, Int)) -> IO [Rule']
+encodeSplitRules :: BTree (AbstractState, (String, Int)) -> Control.Monad.State.StateT (Map (String,Int,[Int]) [Int]) IO [Rule']
 encodeSplitRules graph =
     fmap
         concat
@@ -238,7 +238,7 @@ encodeSplitRules graph =
                             Empty -> [])
                   graph))
 
-encodeSplitRule :: BTree (AbstractState, (String, Int)) -> IO [Rule']
+encodeSplitRule :: BTree (AbstractState, (String, Int)) -> Control.Monad.State.StateT (Map (String,Int,[Int]) [Int]) IO [Rule']
 encodeSplitRule s@(BNode _ s1@(BNode (((_,delta,_):_,_),_) _ _) s2) = do
     eOs <- encodeOut s
     eOs1 <- encodeOut s1

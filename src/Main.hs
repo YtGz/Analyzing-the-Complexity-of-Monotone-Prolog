@@ -16,7 +16,7 @@ import           TRS.Encoding
 import           Data.Maybe
 import           Data.Map
 import qualified Data.List
-import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
+import           Control.Monad.State
 
 --main = print (suc ([(Hole, "")],([AVar "T1", AVar "T2"],[])))
 
@@ -92,17 +92,14 @@ import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
       let o = getInitialAbstractState (head (getQueryClasses exprs)) in
         printSymbolicEvaluationGraph (applyRules o)-}
 
-{-main = do
-      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
-      graph <- generateSymbolicEvaluationGraph (head (getQueryClasses exprs))
-      printSymbolicEvaluationGraph graph-}
-
 main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
-      graph <- generateSymbolicEvaluationGraph (head (getQueryClasses exprs))
-      --printArrayLineByLine (Data.List.map (\(BNode x _ _, BNode y _ _) -> (x,y)) (connectionPathStartAndEndNodes graph))
-      rules <- generateRewriteRules graph
-      printArrayLineByLine rules
+      printSymbolicEvaluationGraph =<< evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) empty
+
+{-main = do
+      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
+      printArrayLineByLine =<< evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs)) >>=
+        generateRewriteRules) empty-}
 
 {-main = print
         (tryToApplyInstanceRule_

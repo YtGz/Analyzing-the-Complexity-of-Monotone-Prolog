@@ -6,7 +6,7 @@ import Data.Implicit
 import Data.Foldable (toList)
 import Data.Maybe
 import Data.List (find, nubBy, nub, (\\))
-import Data.Map (fromList)
+import Data.Map (Map, fromList)
 import Control.Arrow ((***))
 import Control.Monad.State
 import Control.Monad.Extra (mapMaybeM)
@@ -36,7 +36,7 @@ maxBranchingFactor :: Int
 maxBranchingFactor = 4
 
 generateSymbolicEvaluationGraph :: QueryClass
-                                -> IO (BTree (AbstractState, (String, Int)))
+                                -> Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO (BTree (AbstractState, (String, Int)))
 generateSymbolicEvaluationGraph queryClass = do
     tp <-
         evalSupplyT
@@ -89,12 +89,12 @@ getInitialAbstractState (f,m) = do
 applyRule
     :: IO (TreePos Full (AbstractState, (String, Int)))
     -> Int
-    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) (TreePos Full (AbstractState, (String, Int)))
+    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Map (String,Int,[Int]) [Int]) IO)) (TreePos Full (AbstractState, (String, Int)))
 applyRule ioTp n = do
     tp <- Control.Monad.State.liftIO ioTp
     let s = fst (label tp)
     let ss =
-            eval s :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) (AbstractState, AbstractState)
+            eval s :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) (AbstractState, AbstractState)
         s0 = do
             e <- ss
             return (fst e)
@@ -115,7 +115,7 @@ applyRule ioTp n = do
             case s of
                 ((t:_,_,_):_,_) -> do
                     j <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
+                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
                     let newTp =
                             modifyLabel
                                 (\(x,_) ->
@@ -183,7 +183,7 @@ applyRule ioTp n = do
         e = do
             cs0' <- cs0
             j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
             l <-
                 b0
                     (return
@@ -200,7 +200,7 @@ applyRule ioTp n = do
         sp = do
             cs1' <- cs1
             j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
             l <-
                 b0
                     (return
@@ -216,7 +216,7 @@ applyRule ioTp n = do
             b1 l tp
         par = do
             j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
             l <-
                 b0
                     (return
@@ -232,7 +232,7 @@ applyRule ioTp n = do
             b1 l tp
         c = do
             j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
             applyRule
                 (return
                      (fst
@@ -255,7 +255,7 @@ applyRule ioTp n = do
                           (Nothing, Nothing)))
         (([],_,_):_,_) -> do
             j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
+                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
             applyRule
                 (return
                      (fst
@@ -274,7 +274,7 @@ applyRule ioTp n = do
                isBacktrackingApplicable s
                 then do
                     j <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int IO) Int
+                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
                     applyRule
                         (return
                              (fst
