@@ -518,7 +518,7 @@ isFunctionSymbolRecursive (Fun f _) arity =
                          let startF =
                                  Fun f (map (Var . show) (take arity [1,2 ..]))
                          x' <- uncurry instantiateWithFreshVariables x
-                         let sub = unify (fst x') startF --TODO: save state at beginning of this function and restore it at the end
+                         let sub = unify startF (fst x') --TODO: save state at beginning of this function and restore it at the end
                          if isJust sub
                              then return
                                       (Just
@@ -552,7 +552,7 @@ isFunctionSymbolRecursive_ f hrs c = do
         mapMaybeM
             (\(x,y) -> do
                  y' <- uncurry instantiateWithFreshVariables y
-                 let sub = unify (fst y') x --TODO: save state at beginning of this function and restore it at the end
+                 let sub = unify x (fst y') --TODO: save state at beginning of this function and restore it at the end
                  if isJust sub
                      then return
                               (Just

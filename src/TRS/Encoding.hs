@@ -4,7 +4,7 @@ import Control.Monad.State
 import SymbolicEvaluationGraphs.Types (AbstractState, G)
 import SymbolicEvaluationGraphs.InferenceRules (nextG)
 import ExprToTerm.Conversion (Term', Subst', Rule')
-import Data.List (intersect, union, nubBy)
+import Data.List (intersect, union, nub, nubBy)
 import Data.Map (difference, fromList, toList, intersectionWith)
 import qualified Data.Map (filter)
 import Data.Maybe (fromJust)
@@ -20,10 +20,10 @@ generateRewriteRules graph =
     liftM2 (++) (encodeConnectionPaths graph) (encodeSplitRules graph)
 
 encodeIn :: BTree (AbstractState, (String, Int)) -> Term'
-encodeIn (BNode (([(ts,_,_)],(g,_)),("instance",_)) l@(BNode (([(_,mu,_)],_),("instanceChild",_)) Empty Empty) _) =
-    apply mu (encodeIn l)
+encodeIn (BNode (([(_,_,_)],_),("instance",_)) l@(BNode (([(ts,mu,_)],(g,_)),("instanceChild",i)) Empty Empty) _) =
+    Fun ("fin_s" ++ show i) (nub (concatMap ((map Var . vars) . apply mu) ts) `intersect` map (apply mu) g)
 encodeIn (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) =
-    Fun ("fin_s" ++ show i) (concatMap (map Var . vars) ts `intersect` g)
+    Fun ("fin_s" ++ show i) (nub (concatMap (map Var . vars) ts) `intersect` g)
 encodeIn _ = error "Cannot encode abstract state: multiple goals."
 
 encodeOut :: BTree (AbstractState, (String, Int)) -> IO Term'

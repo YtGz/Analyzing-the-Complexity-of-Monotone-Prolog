@@ -15,7 +15,7 @@ import Data.Implicit
 import Data.Bifunctor (bimap)
 import Data.Function (on)
 import System.IO.Unsafe (unsafePerformIO)
-import Data.Rewriting.Substitution (apply, compose, compose', unify)
+import Data.Rewriting.Substitution (apply, compose, unify)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import qualified Data.Rewriting.Term
 import Data.Rewriting.Term.Type (Term(..))
@@ -49,7 +49,7 @@ eval
     -> Control.Monad.State.StateT Int m (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
     (h', b') <- instantiateWithFreshVariables h b
-    let (Just mgu) = unify h' t
+    let (Just mgu) = unify t h'
     let mguG = restrictSubstToG mgu g
         mguGAndRenaming = restrictSubstToGForU mgu g
     return
@@ -227,7 +227,7 @@ nextG t g = do
                                                    [p])))) \\
                            g))
                 [0 .. arityOfRootSymbol t - 1]
-    gA <- groundnessAnalysis (root t) gPos
+    gA <- groundnessAnalysis (root t) (arityOfRootSymbol t) gPos
     return
         (nub
              (concatMap
@@ -241,9 +241,11 @@ nextG t g = do
 
 -- groundness analysis (dependent on user input)
 groundnessAnalysis
-    :: String -> [Int] -> IO [Int]
-groundnessAnalysis f groundInputs = do
-    print (f ++ " " ++ show groundInputs)
+    :: String -> Int -> [Int] -> IO [Int]
+groundnessAnalysis f arity groundInputs = do
+    putStrLn "groundness analysis required:"
+    putStrLn ("function symbol: '" ++ f ++ "'" ++ "   arity: " ++ show arity ++ "   ground argument positions: " ++ show groundInputs)
+    putStrLn "argument positions that will become ground for every answer substitution?"
     readLn :: IO [Int]
 
 -- contrary to the usual substitution labels, the instance child is annotated by the substitution mu associated to the instance father
