@@ -85,34 +85,6 @@ slice t =
               root (fst x) == root t)
         param_
 
-instantiateWithFreshVariables
-  :: (Monad m)
-  => Term' -> Maybe Term' -> Control.Monad.State.StateT Int m (Term', Maybe Term')
-instantiateWithFreshVariables h b =
-  let vs =
-          map
-              Var
-              (nub
-                        (Data.Rewriting.Term.vars
-                        h ++ maybe [] Data.Rewriting.Term.vars b) )
-  in do freshVariables <- mapFreshVariables (return vs)
-        let sub = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
-        return (apply sub h, fmap (apply sub) b)
-
---TODO: there has to be a higher-order function that can be used instead
-mapFreshVariables
-    :: (Monad m)
-    => Control.Monad.State.StateT Int m [Term']
-    -> Control.Monad.State.StateT Int m [Term']
-mapFreshVariables s = do
-    l <- s
-    case l of
-        [] -> return []
-        (_:xs) -> do
-            v <- freshVariable
-            vs <- mapFreshVariables (return xs)
-            return (v : vs)
-
 restrictSubstToG :: Subst' -> G -> Subst'
 restrictSubstToG sub g =
     fromMap

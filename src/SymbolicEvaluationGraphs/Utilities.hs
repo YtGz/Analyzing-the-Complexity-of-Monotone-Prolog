@@ -1,5 +1,7 @@
 module SymbolicEvaluationGraphs.Utilities
   (freshVariable
+  ,instantiateWithFreshVariables
+  ,mapFreshVariables
   ,isAbstractVariable
   ,hasNoAbstractVariables
   ,termToClause
@@ -13,13 +15,43 @@ import Control.Monad.Identity
 import ExprToTerm.Conversion
 import Data.Rewriting.Term.Type (Term(..))
 import SymbolicEvaluationGraphs.Types
+import Data.Rewriting.Substitution (unify, apply)
 import Data.Rewriting.Substitution.Type (fromMap)
 import Data.Rewriting.Term (vars)
 import Text.Read (readMaybe)
 import Data.Maybe
+import Data.List (nub)
 
 freshVariable :: (Monad m) => Control.Monad.State.StateT Int m Term'
 freshVariable = Control.Monad.State.state (\i -> (Var ("T" ++ show i),i+1))
+
+instantiateWithFreshVariables
+  :: (Monad m)
+  => Term' -> Maybe Term' -> Control.Monad.State.StateT Int m (Term', Maybe Term')
+instantiateWithFreshVariables h b =
+  let vs =
+          map
+              Var
+              (nub
+                        (Data.Rewriting.Term.vars
+                        h ++ maybe [] Data.Rewriting.Term.vars b) )
+  in do freshVariables <- mapFreshVariables (return vs)
+        let sub = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
+        return (apply sub h, fmap (apply sub) b)
+
+--TODO: there has to be a higher-order function that can be used instead
+mapFreshVariables
+    :: (Monad m)
+    => Control.Monad.State.StateT Int m [Term']
+    -> Control.Monad.State.StateT Int m [Term']
+mapFreshVariables s = do
+    l <- s
+    case l of
+        [] -> return []
+        (_:xs) -> do
+            v <- freshVariable
+            vs <- mapFreshVariables (return xs)
+            return (v : vs)
 
 -- abstract variables have the format "T" ++ [Int]
 isAbstractVariable

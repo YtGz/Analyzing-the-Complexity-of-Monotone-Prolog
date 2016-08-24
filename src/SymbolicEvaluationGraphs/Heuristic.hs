@@ -23,8 +23,8 @@ import Data.Rewriting.Substitution.Type (fromMap)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
-        tryToApplyInstanceRule, parallel, arityOfRootSymbol, instantiateWithFreshVariables)
-import SymbolicEvaluationGraphs.Utilities (freshVariable)
+        tryToApplyInstanceRule, parallel, arityOfRootSymbol)
+import SymbolicEvaluationGraphs.Utilities (freshVariable, instantiateWithFreshVariables)
 import Data.Tree
 import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 import qualified Data.Rewriting.Term (root)
