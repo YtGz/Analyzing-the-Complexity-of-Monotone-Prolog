@@ -1,23 +1,26 @@
-Rule {lhs = Fun "fin_s0" [Var "T17"], rhs = Fun "u_s0,s4" [Fun "fin_s4" [Var "T17",Var "T17"],Var "T17"]}
-
-Rule {lhs = Fun "u_s0,s4" [Fun "fout_s4" [Var "T17"],Var "T17"], rhs = Fun "fout_s0" [Var "T17"]}
-
-Rule {lhs = Fun "fin_s6" [Var "T35"], rhs = Fun "fout_s6" [Var "T35"]}
-
-Rule {lhs = Fun "fin_s6" [Var "T39"], rhs = Fun "u_s6,s12" [Fun "fin_s12" [Var "T39"],Var "T39"]}
-
-Rule {lhs = Fun "u_s6,s12" [Fun "fout_s12" [Var "T39"],Var "T39"], rhs = Fun "fout_s6" [Var "T39"]}
-
-Rule {lhs = Fun "fin_s18" [Fun "s" [Var "T70"]], rhs = Fun "u_s18,s21" [Fun "fin_s0" [Var "T70"],Var "T70"]}
-
-Rule {lhs = Fun "u_s18,s21" [Fun "fout_s0" [Var "T70"],Var "T70"], rhs = Fun "fout_s18" [Fun "s" [Var "T70"]]}
-
-Rule {lhs = Fun "fin_s12" [Fun "s" [Var "T47"]], rhs = Fun "u_s12,s15" [Fun "fin_s12" [Var "T47"],Var "T47"]}
-
-Rule {lhs = Fun "u_s12,s15" [Fun "fout_s12" [Var "T47"],Var "T47"], rhs = Fun "fout_s12" [Fun "s" [Var "T47"]]}
-
-Rule {lhs = Fun "fin_s4" [Var "T17",Var "T17"], rhs = Fun "u_s4,s6" [Fun "fin_s6" [Var "T17"],Var "T17",Var "T17"]}
-
-Rule {lhs = Fun "u_s4,s6" [Fun "fout_s6" [Var "T17"],Var "T17",Var "T17"], rhs = Fun "u_s6,s18" [Fun "fin_s18" [Var "T17"],Var "T17",Var "T17"]}
-
-Rule {lhs = Fun "u_s6,s18" [Fun "fout_s18" [Var "T17"],Var "T17",Var "T17"], rhs = Fun "fout_s4" [Var "T17"]}
+(VAR T17 T35 T39 T70 T47)
+(RULES
+fin_s0(T17) ->
+  u_s0_s4(fin_s4(T17),T17)
+u_s0_s4(fout_s4(T17),T17) ->
+  fout_s0(T17)
+fin_s6(T35) -> fout_s6(T35)
+fin_s6(T39) ->
+  u_s6_s12(fin_s12(T39),T39)
+u_s6_s12(fout_s12(T39),T39) ->
+  fout_s6(T39)
+fin_s18(s(T70)) ->
+  u_s18_s21(fin_s0(T70),T70)
+u_s18_s21(fout_s0(T70),T70) ->
+  fout_s18(s(T70))
+fin_s12(s(T47)) ->
+  u_s12_s15(fin_s12(T47),T47)
+u_s12_s15(fout_s12(T47),T47) ->
+  fout_s12(s(T47))
+fin_s4(T17) ->
+  u_s4_s6(fin_s6(T17),T17)
+u_s4_s6(fout_s6(T17),T17) ->
+  u_s6_s18(fin_s18(T17),T17)
+u_s6_s18(fout_s18(T17),T17) ->
+  fout_s4(T17)
+)

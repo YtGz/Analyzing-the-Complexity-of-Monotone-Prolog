@@ -109,7 +109,8 @@ main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
       rewriteRules <- evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs)) >>=
         generateRewriteRules) Data.Map.empty
-      printInTPDBFormat rewriteRules
+      (filepath:_) <- getArgs
+      printInTPDBFormat filepath rewriteRules
 
 {-main = print
         (tryToApplyInstanceRule_

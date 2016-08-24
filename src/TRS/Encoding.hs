@@ -278,7 +278,7 @@ getUFunctionSymbol x y =
                   ((\(BNode x _ _) ->
                          x)
                        x))) ++
-    ",s" ++
+    "_s" ++
     show
         (snd
              (snd
