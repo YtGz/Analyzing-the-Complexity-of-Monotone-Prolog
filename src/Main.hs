@@ -17,6 +17,9 @@ import           Data.Maybe
 import           Data.Map
 import qualified Data.List
 import           Control.Monad.State
+import qualified Text.PrettyPrint.ANSI.Leijen as P (text, putDoc, (<>), empty, linebreak)
+import           Data.Rewriting.Rule.Pretty
+import ExprToTerm.Conversion
 
 --main = print (suc ([(Hole, "")],([AVar "T1", AVar "T2"],[])))
 
@@ -92,14 +95,15 @@ import           Control.Monad.State
       let o = getInitialAbstractState (head (getQueryClasses exprs)) in
         printSymbolicEvaluationGraph (applyRules o)-}
 
-main = do
-      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
-      printSymbolicEvaluationGraph =<< evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) empty
-
 {-main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
-      printArrayLineByLine =<< evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs)) >>=
-        generateRewriteRules) empty-}
+      printSymbolicEvaluationGraph =<< evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) empty-}
+
+main = do
+      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
+      rewriteRules <- evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs)) >>=
+        generateRewriteRules) Data.Map.empty
+      P.putDoc (Data.List.foldr ((P.<>) . (P.<>) P.linebreak . prettyRule (P.text "->") P.text P.text) P.empty rewriteRules)
 
 {-main = print
         (tryToApplyInstanceRule_
