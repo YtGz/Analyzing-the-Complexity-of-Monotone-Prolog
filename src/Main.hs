@@ -15,6 +15,8 @@ import           SymbolicEvaluationGraphs.Heuristic
 import           TRS.Encoding
 import           Data.Maybe
 import           Data.Map
+import qualified Data.List
+import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 
 --main = print (suc ([(Hole, "")],([AVar "T1", AVar "T2"],[])))
 
@@ -98,6 +100,7 @@ import           Data.Map
 main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\add_mul.pl"
       graph <- generateSymbolicEvaluationGraph (head (getQueryClasses exprs))
+      --printArrayLineByLine (Data.List.map (\(BNode x _ _, BNode y _ _) -> (x,y)) (connectionPathStartAndEndNodes graph))
       rules <- generateRewriteRules graph
       printArrayLineByLine rules
 
@@ -131,6 +134,10 @@ main = do
 {-main = print (theta `subDif` (sigma `compose` theta)) >>
        putStrLn "" >>
        print sigma
+  where theta = Subst.fromMap (fromList [("T0", Fun "s" [Var "T5"]), ("T1", Var "T2")])
+        sigma = Subst.fromMap (fromList [("T5", Fun "f" [Var "T7"]), ("T2", Var "T4")])-}
+
+{-main = print (Data.Map.map (apply sigma) (Subst.toMap theta))
   where theta = Subst.fromMap (fromList [("T0", Fun "s" [Var "T5"]), ("T1", Var "T2")])
         sigma = Subst.fromMap (fromList [("T5", Fun "f" [Var "T7"]), ("T2", Var "T4")])-}
 

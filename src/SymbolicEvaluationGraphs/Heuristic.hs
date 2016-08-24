@@ -23,7 +23,7 @@ import Data.Rewriting.Substitution.Type (fromMap)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
-        tryToApplyInstanceRule, parallel, unify', arityOfRootSymbol)
+        tryToApplyInstanceRule, parallel, arityOfRootSymbol, instantiateWithFreshVariables)
 import SymbolicEvaluationGraphs.Utilities (freshVariable)
 import Data.Tree
 import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
@@ -358,7 +358,7 @@ getInstanceCandidates
     -> BTree (AbstractState, (String, Int))
     -> Control.Monad.State.State Int [(AbstractState, (String, Int))]
 getInstanceCandidates node graph = do
-    isRecursive <- 
+    isRecursive <-
         if isNothing
                ((\(_,_,x) ->
                       x)
@@ -382,6 +382,7 @@ getInstanceCandidates node graph = do
         (filter
              (\x ->
                    fst (snd x) /= "instance" &&
+                   fst (snd x) /= "instanceChild" &&
                    (getVarNum (fst node) >= getVarNum (fst x) ||
                     (isRecursive &&
                      branchingFactor (nodeHead node) > maxBranchingFactor)))
@@ -516,7 +517,8 @@ isFunctionSymbolRecursive (Fun f _) arity =
                     (\x -> do
                          let startF =
                                  Fun f (map (Var . show) (take arity [1,2 ..]))
-                         sub <- unify' startF (fst x) --TODO: save state at beginning of this function and restore it at the end
+                         x' <- uncurry instantiateWithFreshVariables x
+                         let sub = unify (fst x') startF --TODO: save state at beginning of this function and restore it at the end
                          if isJust sub
                              then return
                                       (Just
@@ -549,13 +551,14 @@ isFunctionSymbolRecursive_ f hrs c = do
     his <-
         mapMaybeM
             (\(x,y) -> do
-                 sub <- unify' x (fst y) --TODO: save state at beginning of this function and restore it at the end
+                 y' <- uncurry instantiateWithFreshVariables y
+                 let sub = unify (fst y') x --TODO: save state at beginning of this function and restore it at the end
                  if isJust sub
                      then return
                               (Just
                                    ((apply (fromJust sub) ***
                                      fmap (apply (fromJust sub)))
-                                        y))
+                                        y'))
                      else return Nothing)
             (filter
                  (\(x,y) ->

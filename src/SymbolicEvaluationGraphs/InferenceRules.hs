@@ -5,7 +5,7 @@ module SymbolicEvaluationGraphs.InferenceRules where
 import Data.Maybe
 import Data.List
 import qualified Data.Map
-       (elems, filter, filterWithKey, fromList, union)
+       (elems, filter, filterWithKey, fromList, union, keys)
 import Control.Arrow
 import Control.Monad (join)
 import Control.Monad.Supply
@@ -15,7 +15,7 @@ import Data.Implicit
 import Data.Bifunctor (bimap)
 import Data.Function (on)
 import System.IO.Unsafe (unsafePerformIO)
-import Data.Rewriting.Substitution (apply, compose, unify)
+import Data.Rewriting.Substitution (apply, compose, compose', unify)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import qualified Data.Rewriting.Term
 import Data.Rewriting.Term.Type (Term(..))
@@ -48,18 +48,19 @@ eval
     => AbstractState
     -> Control.Monad.State.StateT Int m (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
-    (Just mgu) <- unify' t h
+    (h', b') <- instantiateWithFreshVariables h b
+    let (Just mgu) = unify h' t
     let mguG = restrictSubstToG mgu g
         mguGAndRenaming = restrictSubstToGForU mgu g
     return
-        ( ( ( map (apply mgu) (maybe [] splitClauseBody b ++ qs)
-            , compose sub mgu
+        ( ( ( map (apply mgu) (maybe [] splitClauseBody b' ++ qs)
+            , compose mgu sub
             , Nothing) :
             map
                 (\(t',s',c') ->
-                      (map (apply mguG) t', compose s' mguG, c'))
+                      (map (apply mguG) t', compose mguG s', c'))
                 s
-          , ( map
+          , ((g \\ map Var (Data.Map.keys (toMap mgu))) `union` map
                   Var
                   (concatMap
                        Data.Rewriting.Term.vars
@@ -84,25 +85,19 @@ slice t =
               root (fst x) == root t)
         param_
 
--- unify, introducing fresh abstract variables
-unify'
-    :: (Monad m)
-    => Term' -> Term' -> Control.Monad.State.StateT Int m (Maybe Subst')
-unify' t1 t2
-  | Just s <- unify t2 t1   -- note the argument order: use unify h t instead of unify t h to ensure mapping from variables (element V) to abstract variables (element A)
-   =
-      let vs =
-              map
-                  Var
-                  (nub
-                       (concatMap
-                            Data.Rewriting.Term.vars
-                            (Data.Map.elems (toMap s))))
-      in do freshVariables <- mapFreshVariables (return vs)
-            return
-                (Just
-                     (fromJust (unify (Fun "" vs) (Fun "" freshVariables)) `compose`
-                      s)) -- compose takes arguments in reverse order!!!
+instantiateWithFreshVariables
+  :: (Monad m)
+  => Term' -> Maybe Term' -> Control.Monad.State.StateT Int m (Term', Maybe Term')
+instantiateWithFreshVariables h b =
+  let vs =
+          map
+              Var
+              (nub
+                        (Data.Rewriting.Term.vars
+                        h ++ maybe [] Data.Rewriting.Term.vars b) )
+  in do freshVariables <- mapFreshVariables (return vs)
+        let sub = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
+        return (apply sub h, fmap (apply sub) b)
 
 --TODO: there has to be a higher-order function that can be used instead
 mapFreshVariables
