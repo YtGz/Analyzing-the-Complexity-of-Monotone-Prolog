@@ -8,7 +8,7 @@
 -- See also "Data.Rewriting.CriticalPair"
 module Data.Rewriting.Rules (
     -- * Important operations
-    fullRewrite,
+    --fullRewrite,
     -- * Reexported modules
     module Data.Rewriting.Rules.Rewrite,
     module Data.Rewriting.Rules.Ops,
@@ -16,7 +16,3 @@ module Data.Rewriting.Rules (
 
 import Data.Rewriting.Rules.Ops
 import Data.Rewriting.Rules.Rewrite hiding (nested, listContexts)
-
-
-
-

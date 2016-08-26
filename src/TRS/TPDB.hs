@@ -5,12 +5,27 @@ import System.IO
 import ExprToTerm.Conversion
 import Data.Rewriting.Rules (vars)
 import Data.Rewriting.Rule (prettyRule)
-import Text.PrettyPrint.ANSI.Leijen (text, hPutDoc, (<$$>), vcat)
+import Text.PrettyPrint.ANSI.Leijen
+       (Doc, text, hPutDoc, (<$$>), vcat)
 
-printInTPDBFormat :: String -> [Rule'] -> IO ()
-printInTPDBFormat filepath rules =
-    withFile filepath WriteMode (`hPutDoc`
-        (text ("(VAR" ++ concatMap (" " ++) (nub (vars rules)) ++ ")") <$$>
-         text "(RULES" <$$>
-         vcat (map (prettyRule (text "->") text text) rules) <$$>
-         text ")"))
+saveFileInTPDBFormat :: String -> [Rule'] -> IO ()
+saveFileInTPDBFormat filepath rules =
+    withFile
+        filepath
+        WriteMode
+        (`hPutDoc` (text
+                        ("(VAR" ++ concatMap (" " ++) (nub (vars rules)) ++ ")") <$$>
+                    text "(RULES" <$$>
+                    vcat (map (prettyRule (text "->") text text) rules) <$$>
+                    text ")"))
+
+concatSaveFileInTPDBFormat :: String -> [[Rule']] -> IO ()
+concatSaveFileInTPDBFormat filepath rules =
+    withFile filepath WriteMode (`hPutDoc` vcat (map getDocInTPDBFormat rules))
+
+getDocInTPDBFormat :: [Rule'] -> Doc
+getDocInTPDBFormat rules =
+    text ("(VAR" ++ concatMap (" " ++) (nub (vars rules)) ++ ")") <$$>
+    text "(RULES" <$$>
+    vcat (map (prettyRule (text "->") text text) rules) <$$>
+    text ")"

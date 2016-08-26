@@ -14,15 +14,15 @@ import Data.List (nubBy, nub, (\\))
 import Data.Function (on)
 import Data.String.Utils
 import Diagrams.Prelude
-import Diagrams.Backend.SVG.CmdLine
+import Diagrams.Backend.SVG (B,renderSVG)
 import Diagrams.TwoD.Layout.Tree
 import Graphics.SVGFonts
 
 --TODO: draw dashed arrows to instance father for instance rule
 printSymbolicEvaluationGraph
-    :: BTree (AbstractState, (String, Int)) -> IO ()
-printSymbolicEvaluationGraph t =
-    mainWith
+    :: FilePath -> BTree (AbstractState, (String, Int)) -> IO ()
+printSymbolicEvaluationGraph filepath t =
+    renderSVG filepath (mkSizeSpec2D (Just 800.0) (Just 800.0))
         ((renderTree'
               fst
               (\((n,s),p1) ((_,s'),p2) ->

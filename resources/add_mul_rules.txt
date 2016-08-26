@@ -1,0 +1,11 @@
+(VAR T16 T57)
+(RULES
+fin_s0(s(T16)) ->
+  u_s0_s9(fin_s9(T16),T16)
+u_s0_s9(fout_s9(T16),T16) ->
+  fout_s0(s(T16))
+fin_s9(s(T57)) ->
+  u_s9_s17(fin_s9(T57),T57)
+u_s9_s17(fout_s9(T57),T57) ->
+  fout_s9(s(T57))
+)

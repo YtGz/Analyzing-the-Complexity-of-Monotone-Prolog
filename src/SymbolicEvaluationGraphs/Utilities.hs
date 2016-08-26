@@ -74,5 +74,5 @@ termToClause h@(Fun _ _) = (h, Nothing) -- fact (empty body)
 termToClause _ = error "Cannot apply 'exprToClause': Malformed Clause"
 
 splitClauseBody :: Term' -> [Term']
-splitClauseBody (Fun "," bs) = bs
+splitClauseBody (Fun "," bs) = concatMap splitClauseBody bs
 splitClauseBody b = [b]

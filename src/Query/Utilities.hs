@@ -30,7 +30,9 @@ getQueryClass (Language.Prolog.Syntax.Op _ [Language.Prolog.Syntax.Str functor a
    (functor, map getArgumentType args)
 
 getArgumentType :: Language.Prolog.Syntax.Expr -> ArgumentType
-getArgumentType (Language.Prolog.Syntax.Str _ _) = In
+getArgumentType (Language.Prolog.Syntax.Str _ []) = In
+getArgumentType (Language.Prolog.Syntax.Str _ args) = if Out `elem` map getArgumentType args then Out else In
 getArgumentType (Language.Prolog.Syntax.Num _) = In
 getArgumentType (Language.Prolog.Syntax.Var _) = Out
+getArgumentType (Language.Prolog.Syntax.Cons arg1 arg2) = if Out `elem` [getArgumentType arg1, getArgumentType arg2] then Out else In
 getArgumentType _ = error "Malformed query argument"

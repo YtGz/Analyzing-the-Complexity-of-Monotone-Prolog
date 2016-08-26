@@ -20,6 +20,7 @@ import qualified Data.List
 import           Control.Monad.State
 import qualified Text.PrettyPrint.ANSI.Leijen as P (text, putDoc, vcat)
 import           Data.Rewriting.Rule.Pretty
+import           Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 
 --main = print (suc ([(Hole, "")],([AVar "T1", AVar "T2"],[])))
 
@@ -96,8 +97,9 @@ import           Data.Rewriting.Rule.Pretty
         printSymbolicEvaluationGraph (applyRules o)-}
 
 {-main = do
-      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
-      printSymbolicEvaluationGraph =<< evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) empty-}
+      args <- getArgs
+      (exprs,_) <- parseProlog2 (head args)
+      printSymbolicEvaluationGraph (head (tail args)) =<< evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) empty-}
 
 {-main = do
       (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
@@ -106,11 +108,31 @@ import           Data.Rewriting.Rule.Pretty
       P.putDoc (P.vcat (Data.List.map (prettyRule (P.text "->") P.text P.text) rewriteRules))-}
 
 main = do
-      (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\resources\\example21.pl"
-      rewriteRules <- evalStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs)) >>=
-        generateRewriteRules) Data.Map.empty
-      (filepath:_) <- getArgs
-      printInTPDBFormat filepath rewriteRules
+      args <- getArgs
+      (exprs,_) <- parseProlog2 (head args)
+      (graph, groundnessAnalysisInformation) <- runStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) Data.Map.empty
+      if not (Data.List.null (fix (\f n ->
+            case n of
+                BNode (_,(s,_)) l r ->
+                    [ s
+                    | s == "split" ] ++
+                    f l ++ f r
+                Empty -> []) graph)) then do
+        printSymbolicEvaluationGraph (head (tail args)) graph
+        putStrLn "Please take a look at the generated graph. Are there multiplicative split nodes (y/n)?"
+        ans <- readLn
+        if ans == "y" || ans == "yes" then do
+          putStrLn "Please indicate the positions of the multiplicative split nodes:"
+          mulSplitNodes <- readLn
+          putStrLn "Please note that this will fail if the symbolic evaluation graph is not decomposable."
+          rewriteRules <- evalStateT (generateRewriteRulesForGraphsWithMultSplitNodes graph mulSplitNodes) groundnessAnalysisInformation
+          concatSaveFileInTPDBFormat (head (tail (tail args))) rewriteRules
+        else do
+          rewriteRules <- evalStateT (generateRewriteRules graph) groundnessAnalysisInformation
+          saveFileInTPDBFormat (head (tail (tail args))) rewriteRules
+      else do
+        rewriteRules <- evalStateT (generateRewriteRules graph) groundnessAnalysisInformation
+        saveFileInTPDBFormat (head (tail (tail args))) rewriteRules
 
 {-main = print
         (tryToApplyInstanceRule_
