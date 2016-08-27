@@ -14,7 +14,7 @@ import Data.List (nubBy, nub, (\\))
 import Data.Function (on)
 import Data.String.Utils
 import Diagrams.Prelude
-import Diagrams.Backend.SVG (B,renderSVG)
+import Diagrams.Backend.SVG (B, renderSVG)
 import Diagrams.TwoD.Layout.Tree
 import Graphics.SVGFonts
 
@@ -22,7 +22,9 @@ import Graphics.SVGFonts
 printSymbolicEvaluationGraph
     :: FilePath -> BTree (AbstractState, (String, Int)) -> IO ()
 printSymbolicEvaluationGraph filepath t =
-    renderSVG filepath (mkSizeSpec2D (Just 800.0) (Just 800.0))
+    renderSVG
+        filepath
+        (mkSizeSpec2D (Just 3400.0) (Just 3400.0))
         ((renderTree'
               fst
               (\((n,s),p1) ((_,s'),p2) ->
@@ -71,25 +73,26 @@ printSymbolicEvaluationGraph filepath t =
                              (\s ->
                                    let t =
                                            printAbstractState
-                                               (fst
-                                                    ((if fst (snd s) ==
-                                                         "instanceChild"
-                                                          then (\(([(t,_,c)],g),r) ->
-                                                                     ( ( [ ( t
-                                                                           , fromMap
-                                                                                 (fromList
-                                                                                      [])
-                                                                           , c)]
-                                                                       , g)
-                                                                     , r))
-                                                          else id)
-                                                         s))
+                                               ((if fst (snd s) ==
+                                                    "instanceChild"
+                                                     then (\(([(t,_,c)],g),r) ->
+                                                                ( ( [ ( t
+                                                                      , fromMap
+                                                                            (fromList
+                                                                                 [])
+                                                                      , c)]
+                                                                  , g)
+                                                                , r))
+                                                     else id)
+                                                    s)
                                    in ( t `atop`
                                         rect
                                             (width t + (height t * 1.8))
                                             (height t + (height t * 1.8)) #
                                         fc white #
-                                        lwL 0.2
+                                        if fst (snd s) == "split" then
+                                          lc crimson # lwL 0.4
+                                          else lwL 0.2
                                       , s))
                              t))) #
           lwL 0.2 #
@@ -102,16 +105,23 @@ getAdditionToU :: AbstractState -> String
 getAdditionToU ((t:_,_,Just (h,_)):_,_) = showTerm' t ++ " !~ " ++ showTerm' h
 getAdditionToU s = error "Malformed abstract state."
 
-printAbstractState :: AbstractState -> QDiagram B V2 Double Any
-printAbstractState ([],_) = write "e"
-printAbstractState (gs,(g,u)) =
-    (foldr
-         ((|||) . (||| (strutX 1.2 ||| write "|" ||| strutX 1.2)) . f)
-         mempty
-         (init gs) |||
-     f (last gs)) #
+printAbstractState :: (AbstractState, (String, Int)) -> QDiagram B V2 Double Any
+printAbstractState (([],_),_) = write "e"
+printAbstractState ((gs,(g,u)),(s,i)) =
+    label
+        (foldr
+             ((|||) . (||| (strutX 1.2 ||| write "|" ||| strutX 1.2)) . f)
+             mempty
+             (init gs) |||
+         f (last gs)) #
     centerXY
   where
+    label =
+        if s == "split"
+            then (\x ->
+                       x ||| (strutX 1.2 ||| write "||" ||| strutX 1.2) |||
+                       write (show i))
+            else id
     f (qs,sub,clause) =
         write
             (if null qs
