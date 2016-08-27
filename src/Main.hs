@@ -134,6 +134,16 @@ main = do
         rewriteRules <- evalStateT (generateRewriteRules graph) groundnessAnalysisInformation
         saveFileInTPDBFormat (head (tail (tail args))) rewriteRules
 
+
+getNode :: BTree (AbstractState,(String,Int)) -> Int -> AbstractState
+getNode graph i = head (fix (\f n ->
+      case n of
+          BNode (s,(_,j)) l r ->
+              if i == j then
+              [s] else
+              f l ++ f r
+          Empty -> []) graph)
+
 {-main = print
         (tryToApplyInstanceRule_
           ([([Fun "mult" [Var "T37",Fun "Left 0" []]],Subst.fromMap (Data.Map.fromList [("T0",Fun "s" [Var "T3"]),("T1",Var "T4"),("T3",Var "T5"),("T36",Var "T37"),("T37",Var "T37"),("T4",Fun "Left 0" []),("T5",Fun "s" [Var "T36"]),("X",Fun "mult" [Var "T37",Fun "Left 0" []]),("Z",Var "T36")]),Nothing)],([Var "T37"],[(Fun "mult" [Fun "s" [Fun "s" [Var "T37"]],Var "T1"],Fun "mult" [Fun "Left 0" [],Var "X"]),(Fun "mult" [Fun "s" [Var "T37"],Fun "Left 0" []],Fun "mult" [Fun "Left 0" [],Var "X"])]))

@@ -24,7 +24,8 @@ import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
         tryToApplyInstanceRule, parallel, arityOfRootSymbol)
-import SymbolicEvaluationGraphs.Utilities (freshVariable, instantiateWithFreshVariables)
+import SymbolicEvaluationGraphs.Utilities
+       (freshVariable, instantiateWithFreshVariables)
 import Data.Tree
 import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 import qualified Data.Rewriting.Term (root)
@@ -35,8 +36,12 @@ minExSteps = 1
 maxBranchingFactor :: Int
 maxBranchingFactor = 4
 
-generateSymbolicEvaluationGraph :: QueryClass
-                                -> Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO (BTree (AbstractState, (String, Int)))
+graphSizeLimit :: Int
+graphSizeLimit = 160
+
+generateSymbolicEvaluationGraph
+    :: QueryClass
+    -> Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO (BTree (AbstractState, (String, Int)))
 generateSymbolicEvaluationGraph queryClass = do
     tp <-
         evalSupplyT
@@ -89,236 +94,245 @@ getInitialAbstractState (f,m) = do
 applyRule
     :: IO (TreePos Full (AbstractState, (String, Int)))
     -> Int
-    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Map (String,Int,[Int]) [Int]) IO)) (TreePos Full (AbstractState, (String, Int)))
+    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) IO)) (TreePos Full (AbstractState, (String, Int)))
 applyRule ioTp n = do
     tp <- Control.Monad.State.liftIO ioTp
-    let s = fst (label tp)
-    let ss =
-            eval s :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) (AbstractState, AbstractState)
-        s0 = do
-            e <- ss
-            return (fst e)
-        s1 = do
-            e <- ss
-            return (snd e)
-        sps = split s
-        sp0 = do
-            sps' <- sps
-            return (fst sps')
-        sp1 = do
-            sps' <- sps
-            return (snd sps')
-        pars = parallel s
-        par0 = fst pars
-        par1 = snd pars
-        i =
-            case s of
-                ((t:_,_,_):_,_) -> do
+    progress <- peek
+    if progress > graphSizeLimit
+        then return tp
+        else do
+            let s = fst (label tp)
+            let ss =
+                    eval s :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) (AbstractState, AbstractState)
+                s0 = do
+                    e <- ss
+                    return (fst e)
+                s1 = do
+                    e <- ss
+                    return (snd e)
+                sps = split s
+                sp0 = do
+                    sps' <- sps
+                    return (fst sps')
+                sp1 = do
+                    sps' <- sps
+                    return (snd sps')
+                pars = parallel s
+                par0 = fst pars
+                par1 = snd pars
+                i =
+                    case s of
+                        ((t:_,_,_):_,_) -> do
+                            j <-
+                                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            let newTp =
+                                    modifyLabel
+                                        (\(x,_) ->
+                                              (x, ("instance", j)))
+                                        tp
+                            instanceCandidates <-
+                                hoist
+                                    generalize
+                                    (getInstanceCandidates
+                                         (label tp)
+                                         (roseTreeToBTree (toTree newTp)))
+                            let inst =
+                                    tryToApplyInstanceRule s instanceCandidates
+                            if isJust inst
+                                then return
+                                         (Just
+                                              (fst
+                                                   (insertAndMoveToChild
+                                                        newTp
+                                                        (inst, Nothing))))
+                                else return Nothing
+                        _ -> return Nothing
+                b0 x' y = do
+                    x <- x'
+                    nT <- applyRule (return (fst y)) n
+                    return
+                        (fromJust
+                             (parent
+                                  (insert
+                                       (tree
+                                            ((fromJust . firstChild)
+                                                 (followThePath
+                                                      (tree (root nT))
+                                                      (pathToMe x))))
+                                       (first (children x)))))
+                b1 x y = do
+                    nT <- applyRule (return y) n
+                    return
+                        (fromJust
+                             (parent
+                                  (insert
+                                       (tree
+                                            ((fromJust . lastChild)
+                                                 (followThePath
+                                                      (tree (root nT))
+                                                      (pathToMe x))))
+                                       (Data.Tree.Zipper.last (children x)))))
+                cs0 = do
+                    s0' <- s0
+                    s1' <- s1
+                    return
+                        (insertAndMoveToChild
+                             tp
+                             (Just (s0', ("", -1)), Just (s1', ("", -1))))
+                cs1 = do
+                    sp0' <- sp0
+                    sp1' <- sp1
+                    return
+                        (insertAndMoveToChild
+                             tp
+                             (Just (sp0', ("", -1)), Just (sp1', ("", -1))))
+                cs2 =
+                    insertAndMoveToChild
+                        tp
+                        (Just (par0, ("", -1)), Just (par1, ("", -1)))
+                e = do
+                    cs0' <- cs0
                     j <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
-                    let newTp =
-                            modifyLabel
-                                (\(x,_) ->
-                                      (x, ("instance", j)))
-                                tp
-                    instanceCandidates <-
-                        hoist
-                            generalize
-                            (getInstanceCandidates
-                                 (label tp)
-                                 (roseTreeToBTree (toTree newTp)))
-                    let inst = tryToApplyInstanceRule s instanceCandidates
-                    if isJust inst
-                        then return
-                                 (Just
-                                      (fst
-                                           (insertAndMoveToChild
-                                                newTp
-                                                (inst, Nothing))))
-                        else return Nothing
-                _ -> return Nothing
-        b0 x' y = do
-            x <- x'
-            nT <- applyRule (return (fst y)) n
-            return
-                (fromJust
-                     (parent
-                          (insert
-                               (tree
-                                    ((fromJust . firstChild)
-                                         (followThePath
-                                              (tree (root nT))
-                                              (pathToMe x))))
-                               (first (children x)))))
-        b1 x y = do
-            nT <- applyRule (return y) n
-            return
-                (fromJust
-                     (parent
-                          (insert
-                               (tree
-                                    ((fromJust . lastChild)
-                                         (followThePath
-                                              (tree (root nT))
-                                              (pathToMe x))))
-                               (Data.Tree.Zipper.last (children x)))))
-        cs0 = do
-            s0' <- s0
-            s1' <- s1
-            return
-                (insertAndMoveToChild
-                     tp
-                     (Just (s0', ("", -1)), Just (s1', ("", -1))))
-        cs1 = do
-            sp0' <- sp0
-            sp1' <- sp1
-            return
-                (insertAndMoveToChild
-                     tp
-                     (Just (sp0', ("", -1)), Just (sp1', ("", -1))))
-        cs2 =
-            insertAndMoveToChild
-                tp
-                (Just (par0, ("", -1)), Just (par1, ("", -1)))
-        e = do
-            cs0' <- cs0
-            j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
-            l <-
-                b0
-                    (return
-                         (modifyLabel
-                              (\(x,_) ->
-                                    (x, ("eval", j)))
-                              tp))
-                    cs0'
-            let tp =
-                    insert
-                        (tree (snd cs0'))
-                        (Data.Tree.Zipper.last (children l))
-            b1 l tp
-        sp = do
-            cs1' <- cs1
-            j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
-            l <-
-                b0
-                    (return
-                         (modifyLabel
-                              (\(x,_) ->
-                                    (x, ("split", j)))
-                              tp))
-                    cs1'
-            let tp =
-                    insert
-                        (tree (snd cs1'))
-                        (Data.Tree.Zipper.last (children l))
-            b1 l tp
-        par = do
-            j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
-            l <-
-                b0
-                    (return
-                         (modifyLabel
-                              (\(x,_) ->
-                                    (x, ("parallel", j)))
-                              tp))
-                    cs2
-            let tp =
-                    insert
-                        (tree (snd cs2))
-                        (Data.Tree.Zipper.last (children l))
-            b1 l tp
-        c = do
-            j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
-            applyRule
-                (return
-                     (fst
-                          (insertAndMoveToChild
-                               (modifyLabel
-                                    (\(x,_) ->
-                                          (x, ("case", j)))
-                                    tp)
-                               (Just (caseRule s, ("", -1)), Nothing))))
-                (n + 1)
-    case s of
-        ([],_) ->
-            return
-                (fst
-                     (insertAndMoveToChild
-                          (modifyLabel
-                               (\(x,_) ->
-                                     (x, ("", -1)))
-                               tp)
-                          (Nothing, Nothing)))
-        (([],_,_):_,_) -> do
-            j <-
-                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
-            applyRule
-                (return
-                     (fst
-                          (insertAndMoveToChild
-                               (modifyLabel
-                                    (\(x,_) ->
-                                          (x, ("suc", j)))
-                                    tp)
-                               (Just (suc s, ("", -1)), Nothing))))
-                n
-        _ ->
-            if isJust
-                   ((\(_,_,x) ->
-                          x)
-                        (head (fst s))) &&
-               isBacktrackingApplicable s
-                then do
+                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    l <-
+                        b0
+                            (return
+                                 (modifyLabel
+                                      (\(x,_) ->
+                                            (x, ("eval", j)))
+                                      tp))
+                            cs0'
+                    let tp =
+                            insert
+                                (tree (snd cs0'))
+                                (Data.Tree.Zipper.last (children l))
+                    b1 l tp
+                sp = do
+                    cs1' <- cs1
                     j <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO)) Int
+                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    l <-
+                        b0
+                            (return
+                                 (modifyLabel
+                                      (\(x,_) ->
+                                            (x, ("split", j)))
+                                      tp))
+                            cs1'
+                    let tp =
+                            insert
+                                (tree (snd cs1'))
+                                (Data.Tree.Zipper.last (children l))
+                    b1 l tp
+                par = do
+                    j <-
+                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    l <-
+                        b0
+                            (return
+                                 (modifyLabel
+                                      (\(x,_) ->
+                                            (x, ("parallel", j)))
+                                      tp))
+                            cs2
+                    let tp =
+                            insert
+                                (tree (snd cs2))
+                                (Data.Tree.Zipper.last (children l))
+                    b1 l tp
+                c = do
+                    j <-
+                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
                     applyRule
                         (return
                              (fst
                                   (insertAndMoveToChild
                                        (modifyLabel
                                             (\(x,_) ->
-                                                  (x, ("backtrack", j)))
+                                                  (x, ("case", j)))
                                             tp)
-                                       (Just (backtrack s, ("", -1)), Nothing))))
+                                       (Just (caseRule s, ("", -1)), Nothing))))
+                        (n + 1)
+            case s of
+                ([],_) ->
+                    return
+                        (fst
+                             (insertAndMoveToChild
+                                  (modifyLabel
+                                       (\(x,_) ->
+                                             (x, ("", -1)))
+                                       tp)
+                                  (Nothing, Nothing)))
+                (([],_,_):_,_) -> do
+                    j <-
+                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    applyRule
+                        (return
+                             (fst
+                                  (insertAndMoveToChild
+                                       (modifyLabel
+                                            (\(x,_) ->
+                                                  (x, ("suc", j)))
+                                            tp)
+                                       (Just (suc s, ("", -1)), Nothing))))
                         n
-                else do
-                    b <-
-                        case s of
-                            ((t:_,_,Nothing):_,_) ->
-                                if case Data.Rewriting.Term.root t of
-                                       (Left _) -> True
-                                       _ -> False
-                                    then return False
-                                    else hoist
-                                             generalize
-                                             (isFunctionSymbolRecursive
-                                                  (Fun
-                                                       (fromRight
-                                                            (Data.Rewriting.Term.root
-                                                                 t))
-                                                       [])
-                                                  (arityOfRootSymbol t))
-                            ((_:_,_,Just clause):_,_) ->
-                                hoist generalize (isClauseRecursive clause)
-                    if n >= minExSteps && b
-                        then if length (fst s) > 1
-                                 then par
-                                 else do
-                                     i' <- i
-                                     maybe
-                                         (case s of
-                                              (([_],_,Nothing):_,_) -> c
-                                              (([_],_,_):_,_) -> e
-                                              _ -> sp)
-                                         return
-                                         i'
-                        else case s of
-                                 ((_,_,Nothing):_,_) -> c
-                                 _ -> e
+                _ ->
+                    if isJust
+                           ((\(_,_,x) ->
+                                  x)
+                                (head (fst s))) &&
+                       isBacktrackingApplicable s
+                        then do
+                            j <-
+                                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            applyRule
+                                (return
+                                     (fst
+                                          (insertAndMoveToChild
+                                               (modifyLabel
+                                                    (\(x,_) ->
+                                                          (x, ("backtrack", j)))
+                                                    tp)
+                                               ( Just (backtrack s, ("", -1))
+                                               , Nothing))))
+                                n
+                        else do
+                            b <-
+                                case s of
+                                    ((t:_,_,Nothing):_,_) ->
+                                        if case Data.Rewriting.Term.root t of
+                                               (Left _) -> True
+                                               _ -> False
+                                            then return False
+                                            else hoist
+                                                     generalize
+                                                     (isFunctionSymbolRecursive
+                                                          (Fun
+                                                               (fromRight
+                                                                    (Data.Rewriting.Term.root
+                                                                         t))
+                                                               [])
+                                                          (arityOfRootSymbol t))
+                                    ((_:_,_,Just clause):_,_) ->
+                                        hoist
+                                            generalize
+                                            (isClauseRecursive clause)
+                            if n >= minExSteps && b
+                                then if length (fst s) > 1
+                                         then par
+                                         else do
+                                             i' <- i
+                                             maybe
+                                                 (case s of
+                                                      (([_],_,Nothing):_,_) ->
+                                                          c
+                                                      (([_],_,_):_,_) -> e
+                                                      _ -> sp)
+                                                 return
+                                                 i'
+                                else case s of
+                                         ((_,_,Nothing):_,_) -> c
+                                         _ -> e
 
 insertAndMoveToChild
     :: TreePos Full (AbstractState, (String, Int))
@@ -517,14 +531,16 @@ isFunctionSymbolRecursive (Fun f _) arity =
                     (\x -> do
                          let startF =
                                  Fun f (map (Var . show) (take arity [1,2 ..]))
-                         x' <- uncurry instantiateWithFreshVariables x
-                         let sub = unify startF (fst x') --TODO: save state at beginning of this function and restore it at the end
+                         (x',_) <-
+                             instantiateWithFreshVariables
+                                 (fst x : maybeToList (snd x))
+                         let sub = unify startF (head x') --TODO: save state at beginning of this function and restore it at the end
                          if isJust sub
                              then return
                                       (Just
                                            ((apply (fromJust sub) ***
                                              fmap (apply (fromJust sub)))
-                                                x))
+                                                {-(head x', listToMaybe (tail x'))-}x))
                              else return Nothing)
                     (filter
                          (\x ->
@@ -551,14 +567,16 @@ isFunctionSymbolRecursive_ f hrs c = do
     his <-
         mapMaybeM
             (\(x,y) -> do
-                 y' <- uncurry instantiateWithFreshVariables y
-                 let sub = unify x (fst y') --TODO: save state at beginning of this function and restore it at the end
+                 (y',_) <-
+                     instantiateWithFreshVariables
+                         (fst y : maybeToList (snd y))
+                 let sub = unify x (head y') --TODO: save state at beginning of this function and restore it at the end
                  if isJust sub
                      then return
                               (Just
                                    ((apply (fromJust sub) ***
                                      fmap (apply (fromJust sub)))
-                                        y'))
+                                        {-(head y', listToMaybe (tail y'))-}y))
                      else return Nothing)
             (filter
                  (\(x,y) ->

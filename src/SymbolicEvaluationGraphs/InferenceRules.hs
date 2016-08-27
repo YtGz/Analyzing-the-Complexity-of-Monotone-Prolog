@@ -5,7 +5,7 @@ module SymbolicEvaluationGraphs.InferenceRules where
 import Data.Maybe
 import Data.List
 import qualified Data.Map
-       (Map, elems, filter, filterWithKey, fromList, union, keys, insert, member, lookup)
+       (Map, elems, filter, filterWithKey, fromList, union, keys, insert, member, lookup, empty, findWithDefault, map, unions)
 import Control.Arrow
 import Control.Monad (join)
 import Control.Monad.Supply
@@ -48,29 +48,63 @@ eval
     => AbstractState
     -> Control.Monad.State.StateT Int m (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
-    (h', b') <- instantiateWithFreshVariables h b
-    let (Just mgu) = unify t h'
-    let mguG = restrictSubstToG mgu g
-        mguGAndRenaming = restrictSubstToGForU mgu g
+    (h_:b_,_) <- instantiateWithFreshVariables (h : maybeToList b)
+    ([t_], freshVarSub) <- instantiateWithFreshVariables [t]
+    let g_ = map (apply freshVarSub) g
+        qs_ = map (apply freshVarSub) qs
+        sub_ = compose freshVarSub sub
+        s_ = map (\(t',s',c') -> (map (apply freshVarSub) t', compose freshVarSub s',c')) s
+        u_ = map (apply freshVarSub *** apply freshVarSub) u
+        (Just mgu) = unify t_ h_
+        mguG = restrictSubstToG mgu g_
+        mguGAndRenaming = restrictSubstToGForU mgu g_
+    s1 <- flattenLists ( ( map (apply mgu) (maybe [] splitClauseBody (listToMaybe b_) ++ qs)
+        , compose mgu sub_
+        , Nothing) :
+        map
+            (\(t',s',c') ->
+                  (map (apply mguG) t', compose mguG s', c'))
+            s_
+      , ((g_ \\ map Var (Data.Map.keys (toMap mgu))) `union` map
+              Var
+              (concatMap
+                   Data.Rewriting.Term.vars
+                   (Data.Map.elems (toMap mguG)))
+        , map (apply mguGAndRenaming *** apply mguGAndRenaming) u_))
     return
-        ( ( ( map (apply mgu) (maybe [] splitClauseBody b' ++ qs)
-            , compose mgu sub
-            , Nothing) :
-            map
-                (\(t',s',c') ->
-                      (map (apply mguG) t', compose mguG s', c'))
-                s
-          , ((g \\ map Var (Data.Map.keys (toMap mgu))) `union` map
-                  Var
-                  (concatMap
-                       Data.Rewriting.Term.vars
-                       (Data.Map.elems (toMap mguG)))
-            , map (apply mguGAndRenaming *** apply mguGAndRenaming) u))
-        , (s, (g, u ++ [(t, h)])))
+        ( removeUnnecessaryEntriesFromG s1
+        , removeUnnecessaryEntriesFromG (s, (g, u ++ [(t, h)])))
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
 
+flattenLists :: (Monad m) => AbstractState -> Control.Monad.State.StateT Int m AbstractState
+flattenLists ((ts,s,c):ss,(g,u)) = do
+  sub' <- Control.Monad.State.liftM Data.Map.unions (liftM2 (++) (mapM (`flattenListsInTerm` Data.Map.empty) ts) (mapM (`flattenListsInTerm` Data.Map.empty) ts))
+  sub <- Control.Monad.State.liftM Data.Map.unions (liftM2 (++) (mapM (`flattenListsInTerm` Data.Map.empty) ts) (mapM (`flattenListsInTerm` Data.Map.empty) (Data.Map.elems (toMap s))))
+  return ((map (`applyFlattening` sub) ts, fromMap (Data.Map.map (`applyFlattening` sub) (toMap s)), c):ss, (applyFlatteningToG g sub ((ts,s,c):ss), map ((`applyFlattening` sub) *** (`applyFlattening` sub)) u))
+
+flattenListsInTerm :: (Monad m) => Term' -> Data.Map.Map Term' Term' -> Control.Monad.State.StateT Int m (Data.Map.Map Term' Term')
+flattenListsInTerm (Fun ":" subterms) m = Control.Monad.State.liftM Data.Map.unions (mapM (`flattenListsInTerm_` m) subterms)
+flattenListsInTerm (Fun f subterms) m = Control.Monad.State.liftM Data.Map.unions (mapM (`flattenListsInTerm` m) subterms)
+flattenListsInTerm _ m = return m
+
+flattenListsInTerm_ :: (Monad m) => Term' -> Data.Map.Map Term' Term' -> Control.Monad.State.StateT Int m (Data.Map.Map Term' Term')
+flattenListsInTerm_ l@(Fun ":" _) m = do
+  v <- freshVariable
+  return (Data.Map.insert l v m)
+flattenListsInTerm_ (Fun f subterms) m = Control.Monad.State.liftM Data.Map.unions (mapM (`flattenListsInTerm_` m) subterms)
+flattenListsInTerm_ _ m = return m
+
+applyFlattening :: Term' -> Data.Map.Map Term' Term' -> Term'
+applyFlattening v@(Var _) sub = Data.Map.findWithDefault v v sub
+applyFlattening f@(Fun _ _) sub = let f' = Data.Map.findWithDefault f f sub in
+                                  case f' of Var _ -> f'
+                                             Fun f'' args -> Fun f'' (map (`applyFlattening` sub) args)
+
+applyFlatteningToG :: [Term'] -> Data.Map.Map Term' Term' -> SymbolicEvaluationGraphs.Types.State -> [Term']
+applyFlatteningToG g sub ((ts,_,_):ss) = filter (`elem` map Var (nub (concatMap Data.Rewriting.Term.vars (map (`applyFlattening` sub) ts++concatMap (\(x,_,_) -> x) ss)))) g ++ Data.Map.elems (Data.Map.filterWithKey (\k _ -> all (`elem` g) (map Var (Data.Rewriting.Term.vars k))) sub)
+
 backtrack :: AbstractState -> AbstractState
-backtrack (state@((_,_,Just _):_),kb) = (tail state, kb)
+backtrack (state@((_,_,Just _):_),kb) = removeUnnecessaryEntriesFromG (tail state, kb)
 
 root :: Term' -> String
 root (Var s) = s
@@ -107,6 +141,10 @@ restrictSubstToGForU sub g =
                         Data.Rewriting.Term.isVar v -- pure renaming
                    )
                   (toMap sub)))
+
+-- used after a split, eval or backtrack step; to remove vars from G which are no longer part of any term of the abstract state
+removeUnnecessaryEntriesFromG :: AbstractState -> AbstractState
+removeUnnecessaryEntriesFromG (ss,(g,u)) = (ss, (filter (`elem` vs) g, u)) where vs = map Var (concatMap Data.Rewriting.Term.vars (concatMap (\(x,_,_) -> x) ss))
 
 -- we can use the backtrack rule if there is no concretization γ w.r.t. KB such that tγ ~ h
 isBacktrackingApplicable
@@ -180,8 +218,8 @@ split ([(t:qs,sub,Nothing)],(g,u)) = do
              (\x ->
                    return (g `union` map (apply d) x))))
     return
-        ( ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
-        , ([(map (apply d) qs, d, Nothing)], (g', map (apply d *** apply d) u)))
+        ( removeUnnecessaryEntriesFromG ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
+        , removeUnnecessaryEntriesFromG ([(map (apply d) qs, d, Nothing)], (g', map (apply d *** apply d) u)))
 
 nextG :: Term' -> G -> (Control.Monad.State.StateT (Data.Map.Map (String,Int,[Int]) [Int]) IO) G
 nextG t g = do
