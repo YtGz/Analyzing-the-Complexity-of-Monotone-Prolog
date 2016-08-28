@@ -48,7 +48,7 @@ generateSymbolicEvaluationGraph queryClass = do
             (evalStateT
                  (do initialState <- getInitialAbstractState queryClass
                      applyRule
-                         (return (fromTree (Node (initialState, ("", 0)) [])))
+                         (return (fromTree (Node (initialState, ("", -1)) [])))
                          0)
                  0)
             [0 ..]
@@ -123,29 +123,42 @@ applyRule ioTp n = do
                 i =
                     case s of
                         ((t:_,_,_):_,_) -> do
-                            j <-
-                                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
-                            let newTp =
-                                    modifyLabel
-                                        (\(x,_) ->
-                                              (x, ("instance", j)))
-                                        tp
-                            instanceCandidates <-
-                                hoist
-                                    generalize
-                                    (getInstanceCandidates
-                                         (label tp)
-                                         (roseTreeToBTree (toTree newTp)))
-                            let inst =
-                                    tryToApplyInstanceRule s instanceCandidates
-                            if isJust inst
-                                then return
-                                         (Just
-                                              (fst
-                                                   (insertAndMoveToChild
-                                                        newTp
-                                                        (inst, Nothing))))
-                                else return Nothing
+                          let j = snd (snd (label tp))
+                          j <- if j == -1 then
+                            peek :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                          else return j
+                          let newTp =
+                                  modifyLabel
+                                      (\(x,_) ->
+                                            (x, ("instance", j)))
+                                      tp
+                          instanceCandidates <-
+                              hoist
+                                  generalize
+                                  (getInstanceCandidates
+                                       (label tp)
+                                       (roseTreeToBTree (toTree newTp)))
+                          let inst =
+                                  tryToApplyInstanceRule s instanceCandidates
+                          if isJust inst
+                              then do
+                                  let j = snd (snd (label tp))
+                                  j <- if j == -1 then
+                                    supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                                  else return j
+                                  let newTp =
+                                          modifyLabel
+                                              (\(x,_) ->
+                                                    (x, ("instance", j)))
+                                              tp
+                                  return
+                                       (Just
+                                            (fst
+                                                 (insertAndMoveToChild
+                                                      newTp
+                                                      (inst, Nothing))))
+                              else
+                                return Nothing
                         _ -> return Nothing
                 b0 x' y = do
                     x <- x'
@@ -175,25 +188,33 @@ applyRule ioTp n = do
                 cs0 = do
                     s0' <- s0
                     s1' <- s1
+                    j1 <- supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    j2 <- supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
                     return
                         (insertAndMoveToChild
                              tp
-                             (Just (s0', ("", -1)), Just (s1', ("", -1))))
+                             (Just (s0', ("", j1)), Just (s1', ("", j2))))
                 cs1 = do
                     sp0' <- sp0
                     sp1' <- sp1
+                    j1 <- supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    j2 <- supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
                     return
                         (insertAndMoveToChild
                              tp
-                             (Just (sp0', ("", -1)), Just (sp1', ("", -1))))
-                cs2 =
-                    insertAndMoveToChild
+                             (Just (sp0', ("", j1)), Just (sp1', ("", j2))))
+                cs2 = do
+                    j1 <- supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    j2 <- supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    return (insertAndMoveToChild
                         tp
-                        (Just (par0, ("", -1)), Just (par1, ("", -1)))
+                        (Just (par0, ("", j1)), Just (par1, ("", j2))))
                 e = do
+                    let j = snd (snd (label tp))
+                    j <- if j == -1 then
+                      supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    else return j
                     cs0' <- cs0
-                    j <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
                     l <-
                         b0
                             (return
@@ -208,9 +229,11 @@ applyRule ioTp n = do
                                 (Data.Tree.Zipper.last (children l))
                     b1 l tp
                 sp = do
+                    let j = snd (snd (label tp))
+                    j <- if j == -1 then
+                      supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    else return j
                     cs1' <- cs1
-                    j <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
                     l <-
                         b0
                             (return
@@ -225,8 +248,11 @@ applyRule ioTp n = do
                                 (Data.Tree.Zipper.last (children l))
                     b1 l tp
                 par = do
-                    j <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    let j = snd (snd (label tp))
+                    j <- if j == -1 then
+                      supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    else return j
+                    cs2' <- cs2
                     l <-
                         b0
                             (return
@@ -234,15 +260,17 @@ applyRule ioTp n = do
                                       (\(x,_) ->
                                             (x, ("parallel", j)))
                                       tp))
-                            cs2
+                            cs2'
                     let tp =
                             insert
-                                (tree (snd cs2))
+                                (tree (snd cs2'))
                                 (Data.Tree.Zipper.last (children l))
                     b1 l tp
                 c = do
-                    j <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    let j = snd (snd (label tp))
+                    j <- if j == -1 then
+                      supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    else return j
                     applyRule
                         (return
                              (fst
@@ -264,8 +292,10 @@ applyRule ioTp n = do
                                        tp)
                                   (Nothing, Nothing)))
                 (([],_,_):_,_) -> do
-                    j <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    let j = snd (snd (label tp))
+                    j <- if j == -1 then
+                      supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                    else return j
                     applyRule
                         (return
                              (fst
@@ -283,8 +313,10 @@ applyRule ioTp n = do
                                 (head (fst s))) &&
                        isBacktrackingApplicable s
                         then do
-                            j <-
-                                supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            let j = snd (snd (label tp))
+                            j <- if j == -1 then
+                              supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            else return j
                             applyRule
                                 (return
                                      (fst
