@@ -83,6 +83,7 @@ flattenLists ((ts,s,c):ss,(g,u)) = do
   return ((map (`applyFlattening` sub) ts, fromMap (Data.Map.map (`applyFlattening` sub) (toMap s)), c):ss, (applyFlatteningToG g sub ((ts,s,c):ss), map ((`applyFlattening` sub) *** (`applyFlattening` sub)) u))
 
 flattenListsInTerm :: (Monad m) => Term' -> Data.Map.Map Term' Term' -> Control.Monad.State.StateT Int m (Data.Map.Map Term' Term')
+--flattenListsInTerm (Fun ":" [_,Fun"[]" []]) = flatten that too ++ flatten generally anything with x:[] => x
 flattenListsInTerm (Fun ":" subterms) m = Control.Monad.State.liftM Data.Map.unions (mapM (`flattenListsInTerm_` m) subterms)
 flattenListsInTerm (Fun f subterms) m = Control.Monad.State.liftM Data.Map.unions (mapM (`flattenListsInTerm` m) subterms)
 flattenListsInTerm _ m = return m
@@ -261,7 +262,9 @@ groundnessAnalysis f arity groundInputs = do
       putStrLn "groundness analysis required:"
       putStrLn ("function symbol: '" ++ f ++ "'" ++ "   arity: " ++ show arity ++ "   ground argument positions: " ++ show groundInputs)
       putStrLn "argument positions that will become ground for every answer substitution?"
-      readLn :: IO [Int])
+      res <- readLn :: IO [Int]
+      putStrLn ""
+      return res)
     Control.Monad.State.modify (Data.Map.insert (f,arity,groundInputs) groundOutputs)
     return groundOutputs
 
@@ -280,7 +283,7 @@ tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) ((([(qs',_,c')],(g',u')),(r,i)):xs) 
                          null (xs \\ ys) && null (ys \\ xs))
                        (nub g)
                        (nub
-                            (concatMap
+                          (concatMap
                                  (map Var .
                                   Data.Rewriting.Term.vars .
                                   apply (fromJust (head mu)))
