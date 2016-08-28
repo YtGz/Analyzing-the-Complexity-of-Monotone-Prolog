@@ -110,6 +110,7 @@ import           Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 main = do
       args <- getArgs
       (exprs,_) <- parseProlog2 (head args)
+      putStrLn ""
       (graph, groundnessAnalysisInformation) <- runStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) Data.Map.empty
       if not (Data.List.null (fix (\f n ->
             case n of
@@ -121,10 +122,14 @@ main = do
         printSymbolicEvaluationGraph (head (tail args)) graph
         putStrLn "Please take a look at the generated graph. Are there multiplicative split nodes (y/n)? Potential nodes are marked in red."
         ans <- getLine
+        putStrLn ""
         if ans == "y" || ans == "yes" then do
           putStrLn "Please indicate the positions of the multiplicative split nodes:"
           mulSplitNodes <- readLn
+          putStrLn ""
           putStrLn "Please note that this will fail if the symbolic evaluation graph is not decomposable."
+          putStrLn ""
+          putStrLn ""
           rewriteRules <- evalStateT (generateRewriteRulesForGraphsWithMultSplitNodes graph mulSplitNodes) groundnessAnalysisInformation
           concatSaveFileInTPDBFormat (head (tail (tail args))) rewriteRules
         else do

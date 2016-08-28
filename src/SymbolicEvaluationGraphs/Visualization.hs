@@ -11,7 +11,7 @@ import Data.Rewriting.Term (vars)
 import Data.Map (toList, fromList)
 import Data.Maybe
 import Data.List (nubBy, nub, (\\))
-import Data.Function (on)
+import Data.Function (on, fix)
 import Data.String.Utils
 import Control.Monad (when, liftM, liftM2, liftM3)
 import System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
@@ -19,102 +19,115 @@ import Diagrams.Prelude
 import Diagrams.Backend.SVG (B, renderSVG)
 import Diagrams.TwoD.Layout.Tree
 import Graphics.SVGFonts
+import Control.Concurrent (threadDelay, forkIO, killThread)
 
 --TODO: draw dashed arrows to instance father for instance rule
 printSymbolicEvaluationGraph
     :: FilePath -> BTree (AbstractState, (String, Int)) -> IO ()
 printSymbolicEvaluationGraph filepath t = do
-    let graphSize = length t
-    let progressBarLength = min 40 graphSize
+    let diagram =
+            (renderTree'
+                 fst
+                 (\((n,s),p1) ((_,s'),p2) ->
+                       let rule = write (fst (snd s))
+                           additionToU =
+                               if fst (snd s) == "eval" && fst (unp2 p2) >=
+                                  fst (unp2 p1)
+                                   then write (getAdditionToU (fst s))
+                                   else write ""
+                           mu =
+                               if fst (snd s') == "instanceChild"
+                                   then write
+                                            (showSubst'
+                                                 ((\(_,mu,_) ->
+                                                        mu)
+                                                      (head (fst (fst s')))))
+                                   else write ""
+                           annotationToTheRight = additionToU `atop` mu
+                       in rule #
+                          translate
+                              (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
+                               (negated (V2 (snd (fromJust (extentX rule))) 0) ^+^
+                                unit_X)) `atop`
+                          annotationToTheRight #
+                          translate
+                              (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
+                               (negated
+                                    (V2
+                                         (fst
+                                              (fromJust
+                                                   (extentX
+                                                        annotationToTheRight)))
+                                         0) #
+                                scale 1.2)) `atop`
+                          p1 ~~
+                          p2)
+                 (fromJust
+                      (symmLayoutBin'
+                           (with & slVSep .~ 4 & slWidth .~ fromMaybe (0, 0) .
+                            extentX .
+                            fst &
+                            slHeight .~
+                            fromMaybe (0, 0) .
+                            extentY .
+                            fst)
+                           (fmap
+                                (\s ->
+                                      let t =
+                                              printAbstractState
+                                                  ((if fst (snd s) ==
+                                                       "instanceChild"
+                                                        then (\(([(t,_,c)],g),r) ->
+                                                                   ( ( [ ( t
+                                                                         , fromMap
+                                                                               (fromList
+                                                                                    [])
+                                                                         , c)]
+                                                                     , g)
+                                                                   , r))
+                                                        else id)
+                                                       s)
+                                      in ( t `atop`
+                                           rect
+                                               (width t + (height t * 1.8))
+                                               (height t + (height t * 1.8)) #
+                                           fc white #
+                                           if fst (snd s) == "split"
+                                               then lc crimson # lwL 0.4
+                                               else lwL 0.2
+                                         , s))
+                                t))) #
+             lwL 0.2 #
+             centerXY #
+             padX 1.1 #
+             padY 1.4 #
+             scale 15) :: Diagram B
     putStrLn ""
-    putStrLn "Generating the vector graphic:"
+    putStrLn "generating the vector graphic..."
     hSetBuffering stdout NoBuffering
-    putStr (replicate progressBarLength '.')
+    animThread <-
+        forkIO
+            (fix
+                 (\f i c ->
+                       putChar c >> threadDelay 20000 >>
+                       if i == 19
+                           then putChar '\r' >>
+                                f
+                                    0
+                                    (if c == '#'
+                                         then '>'
+                                         else '#')
+                           else f (i + 1) c)
+                 0
+                 '#')
+    renderSVG filepath (mkSizeSpec2D (Just 3400.0) (Just 3400.0)) diagram
+    killThread animThread
     putChar '\r'
-    diagram <- (liftM3 renderTree'
-          (return fst)
-          (return (\((n,s),p1) ((_,s'),p2) ->
-                let rule = write (fst (snd s))
-                    additionToU =
-                        if fst (snd s) == "eval" && fst (unp2 p2) >=
-                           fst (unp2 p1)
-                            then write (getAdditionToU (fst s))
-                            else write ""
-                    mu =
-                        if fst (snd s') == "instanceChild"
-                            then write
-                                     (showSubst'
-                                          ((\(_,mu,_) ->
-                                                 mu)
-                                               (head (fst (fst s')))))
-                            else write ""
-                    annotationToTheRight = additionToU `atop` mu
-                in rule #
-                   translate
-                       (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
-                        (negated (V2 (snd (fromJust (extentX rule))) 0) ^+^
-                         unit_X)) `atop`
-                   annotationToTheRight #
-                   translate
-                       (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
-                        (negated
-                             (V2
-                                  (fst
-                                       (fromJust
-                                            (extentX annotationToTheRight)))
-                                  0) #
-                         scale 1.2)) `atop`
-                   p1 ~~
-                   p2))
-          (fmap fromJust
-               (liftM2 symmLayoutBin'
-                    (return (with & slVSep .~ 4 & slWidth .~ fromMaybe (0, 0) .
-                       extentX .
-                       fst &
-                       slHeight .~
-                       fromMaybe (0, 0) .
-                       extentY .
-                       fst))
-                    (mapM
-                         ((\s -> do
-                               when ((snd (snd s)+1) `mod` max 1 (graphSize `div` progressBarLength) == 0) (putChar '>')
-                               let t =
-                                       printAbstractState
-                                           ((if fst (snd s) ==
-                                                "instanceChild"
-                                                 then (\(([(t,_,c)],g),r) ->
-                                                            ( ( [ ( t
-                                                                  , fromMap
-                                                                        (fromList
-                                                                             [])
-                                                                  , c)]
-                                                              , g)
-                                                            , r))
-                                                 else id)
-                                                s)
-                               return ( t `atop`
-                                    rect
-                                        (width t + (height t * 1.8))
-                                        (height t + (height t * 1.8)) #
-                                    fc white #
-                                    if fst (snd s) == "split" then
-                                      lc crimson # lwL 0.4
-                                      else lwL 0.2
-                                  , s)) :: (AbstractState, (String, Int)) -> IO (QDiagram B V2 Double Any,(AbstractState, (String, Int))) )
-                         t))) #
-      liftM2 lwL (return 0.2) #
-      fmap centerXY #
-      liftM2 padX (return 1.1) #
-      liftM2 padY (return 1.4) #
-      liftM2 scale (return 15)) :: IO (Diagram B)
+    putStr (replicate 20 ' ')
+    putChar '\r'
+    putStrLn "done!"
     putStrLn ""
     putStrLn ""
-    putStrLn ""
-    renderSVG
-        filepath
-        (mkSizeSpec2D (Just 3400.0) (Just 3400.0))
-        diagram
-
 
 getAdditionToU :: AbstractState -> String
 getAdditionToU ((t:_,_,Just (h,_)):_,_) = showTerm' t ++ " !~ " ++ showTerm' h
