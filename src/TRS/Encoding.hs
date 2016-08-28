@@ -75,7 +75,12 @@ connectionPathStartNodes graph =
                                BNode x l r
                                  | fst (snd x) == "instance" ->
                                      let instanceChild =
-                                             head
+                                             (\x ->
+                                                   case x of
+                                                       [] ->
+                                                           error
+                                                               "The graph is not decomposable. Analysis not possible."
+                                                       _ -> head x)
                                                  (filter
                                                       (\(BNode (_,(_,i)) _ _) ->
                                                             i ==
@@ -93,19 +98,15 @@ connectionPathStartNodes graph =
                                         f l ++ f r
                                  | fst (snd x) == "split" ->
                                      [ l
-                                     | fst
-                                          (snd
-                                               ((\(BNode x _ _) ->
-                                                      x)
-                                                    l)) `notElem`
-                                           ["instance", "split"] ] ++
+                                     | (\(BNode x _ _) ->
+                                             fst (snd x))
+                                          l `notElem`
+                                           ["instance", "split", "noChild"] ] ++
                                      [ r
-                                     | fst
-                                          (snd
-                                               ((\(BNode x _ _) ->
-                                                      x)
-                                                    r)) `notElem`
-                                           ["instance", "split"] ] ++
+                                     | (\(BNode x _ _) ->
+                                             fst (snd x))
+                                          r `notElem`
+                                           ["instance", "split", "noChild"] ] ++
                                      f l ++ f r
                                  | otherwise -> f l ++ f r
                                Empty -> [])
@@ -349,7 +350,14 @@ endGraphAtMultSplitNodes
 endGraphAtMultSplitNodes Empty _ = Empty
 endGraphAtMultSplitNodes (BNode x l r) is =
     if snd (snd x) `elem` is && fst (snd x) /= "instanceChild"
-        then BNode x Empty Empty
+        then BNode
+                 x
+                 ((\(BNode (as,(r,i)) _ _) ->
+                        BNode (as, ("noChild", i)) Empty Empty)
+                      l)
+                 ((\(BNode (as,(r,i)) _ _) ->
+                        BNode (as, ("noChild", i)) Empty Empty)
+                      r)
         else BNode
                  x
                  (endGraphAtMultSplitNodes l is)

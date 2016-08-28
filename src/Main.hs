@@ -120,7 +120,7 @@ main = do
                 Empty -> []) graph)) then do
         printSymbolicEvaluationGraph (head (tail args)) graph
         putStrLn "Please take a look at the generated graph. Are there multiplicative split nodes (y/n)? Potential nodes are marked in red."
-        ans <- readLn
+        ans <- getLine
         if ans == "y" || ans == "yes" then do
           putStrLn "Please indicate the positions of the multiplicative split nodes:"
           mulSplitNodes <- readLn
