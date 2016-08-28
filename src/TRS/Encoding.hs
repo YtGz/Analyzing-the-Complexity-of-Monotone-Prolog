@@ -8,7 +8,7 @@ import Data.List (intersect, union, nub, nubBy, (\\))
 import Data.Map
        (Map, difference, fromList, toList, intersectionWith)
 import qualified Data.Map (filter)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust, listToMaybe)
 import Control.Monad.Morph
 import Data.Rewriting.Term (Term(..), vars)
 import Data.Rewriting.Substitution (apply, merge)
@@ -20,15 +20,25 @@ generateRewriteRules
     :: BTree (AbstractState, (String, Int))
     -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) IO [Rule']
 generateRewriteRules graph =
-    liftM2 (++) (encodeConnectionPaths graph) (encodeSplitRules graph)
+    let iCs = instanceChildren graph graph
+    in generateRewriteRules_ graph iCs
+
+generateRewriteRules_
+    :: BTree (AbstractState, (String, Int))
+    -> [BTree (AbstractState, (String, Int))]
+    -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) IO [Rule']
+generateRewriteRules_ graph iCs =
+    liftM2 (++) (encodeConnectionPaths graph iCs) (encodeSplitRules graph)
 
 generateRewriteRulesForGraphsWithMultSplitNodes
     :: BTree (AbstractState, (String, Int))
     -> [Int]
     -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) IO [[Rule']]
 generateRewriteRulesForGraphsWithMultSplitNodes graph mulSplitNodes = do
+    assertDecomposability graph mulSplitNodes
     let subGraphs = generateSubGraphsForMultSplit graph mulSplitNodes
-    mapM generateRewriteRules subGraphs
+        iCs = instanceChildren graph graph
+    mapM (`generateRewriteRules_` iCs) subGraphs
 
 encodeIn :: BTree (AbstractState, (String, Int)) -> Term'
 encodeIn (BNode (([(_,_,_)],_),("instance",_)) l@(BNode (([(ts,mu,_)],(g,_)),("instanceChild",i)) Empty Empty) _) =
@@ -57,89 +67,85 @@ nextGOnQuery :: [Term']
 nextGOnQuery [] g = return g
 nextGOnQuery (x:xs) g = nextGOnQuery xs =<< nextG x g
 
-connectionPathStartNodes :: BTree (AbstractState, (String, Int))
-                         -> [BTree (AbstractState, (String, Int))]
-connectionPathStartNodes graph =
-    let iCs = instanceChildren graph
-    in nubBy
-           (\(BNode (_,(_,i)) _ _) (BNode (_,(_,j)) _ _) ->
-                 i == j)
-           (filter
-                (\x ->
-                      case x of
-                          BNode{} -> True
-                          Empty -> False)
-                (graph :
-                 fix
-                     (\f n ->
-                           case n of
-                               BNode x l r
-                                 | fst (snd x) == "instance" ->
-                                     let instanceChild =
-                                             (\x ->
-                                                   case x of
-                                                       [] ->
-                                                           error
-                                                               "The graph is not decomposable. Analysis not possible."
-                                                       _ -> head x)
-                                                 (filter
-                                                      (\(BNode (_,(_,i)) _ _) ->
-                                                            i ==
-                                                            (\(BNode (_,(_,i)) _ _) ->
-                                                                  i)
-                                                                l)
-                                                      iCs)
-                                     in [ instanceChild
-                                        | fst
-                                             (snd
-                                                  ((\(BNode x _ _) ->
-                                                         x)
-                                                       instanceChild)) `notElem`
-                                              ["instance", "split"] ] ++
-                                        f l ++ f r
-                                 | fst (snd x) == "split" ->
-                                     [ l
-                                     | (\(BNode x _ _) ->
-                                             fst (snd x))
-                                          l `notElem`
-                                           ["instance", "split", "noChild"] ] ++
-                                     [ r
-                                     | (\(BNode x _ _) ->
-                                             fst (snd x))
-                                          r `notElem`
-                                           ["instance", "split", "noChild"] ] ++
+connectionPathStartNodes
+    :: BTree (AbstractState, (String, Int))
+    -> [BTree (AbstractState, (String, Int))]
+    -> [BTree (AbstractState, (String, Int))]
+connectionPathStartNodes graph iCs =
+    nubBy
+        (\(BNode (_,(_,i)) _ _) (BNode (_,(_,j)) _ _) ->
+              i == j)
+        (filter
+             (\x ->
+                   case x of
+                       BNode{} -> True
+                       Empty -> False)
+             (graph :
+              fix
+                  (\f n ->
+                        case n of
+                            BNode x l r
+                              | fst (snd x) == "instance" ->
+                                  let instanceChild =
+                                          head
+                                              (filter
+                                                   (\(BNode (_,(_,i)) _ _) ->
+                                                         i ==
+                                                         (\(BNode (_,(_,i)) _ _) ->
+                                                               i)
+                                                             l)
+                                                   iCs)
+                                  in [ instanceChild
+                                     | fst
+                                          (snd
+                                               ((\(BNode x _ _) ->
+                                                      x)
+                                                    instanceChild)) `notElem`
+                                           ["instance", "split"] ] ++
                                      f l ++ f r
-                                 | otherwise -> f l ++ f r
-                               Empty -> [])
-                     graph))
+                              | fst (snd x) == "split" ->
+                                  [ l
+                                  | (\(BNode x _ _) ->
+                                          fst (snd x))
+                                       l `notElem`
+                                        ["instance", "split", "noChild"] ] ++
+                                  [ r
+                                  | (\(BNode x _ _) ->
+                                          fst (snd x))
+                                       r `notElem`
+                                        ["instance", "split", "noChild"] ] ++
+                                  f l ++ f r
+                              | otherwise -> f l ++ f r
+                            Empty -> [])
+                  graph))
 
 connectionPathStartAndEndNodes
     :: BTree (AbstractState, (String, Int))
+    -> [BTree (AbstractState, (String, Int))]
     -> [(BTree (AbstractState, (String, Int)), BTree (AbstractState, (String, Int)))]
-connectionPathStartAndEndNodes graph =
-    let iCs = instanceChildren graph
-    in concatMap
-           (\x ->
-                 map
-                     (\y ->
-                           (x, y))
-                     (connectionPathEndNodes iCs x))
-           (connectionPathStartNodes graph)
+connectionPathStartAndEndNodes graph iCs =
+    concatMap
+        (\x ->
+              map
+                  (\y ->
+                        (x, y))
+                  (connectionPathEndNodes x iCs))
+        (connectionPathStartNodes graph iCs)
 
 connectionPathEndNodes
-    :: [BTree (AbstractState, (String, Int))]
-    -> BTree (AbstractState, (String, Int))
+    :: BTree (AbstractState, (String, Int))
     -> [BTree (AbstractState, (String, Int))]
-connectionPathEndNodes _ Empty = error "Empty start node."
-connectionPathEndNodes iCs (BNode _ l r) =
-    connectionPathEndNodes_ iCs l ++ connectionPathEndNodes_ iCs r
+    -> [BTree (AbstractState, (String, Int))]
+connectionPathEndNodes Empty _ = error "Empty start node."
+connectionPathEndNodes (BNode _ l r) iCs =
+    connectionPathEndNodes_ l iCs ++ connectionPathEndNodes_ r iCs
 
 connectionPathEndNodes_
-    :: [BTree (AbstractState, (String, Int))]
-    -> BTree (AbstractState, (String, Int))
+    :: BTree (AbstractState, (String, Int))
     -> [BTree (AbstractState, (String, Int))]
-connectionPathEndNodes_ iCs Empty = []
-connectionPathEndNodes_ iCs n@(BNode x l r)
+    -> [BTree (AbstractState, (String, Int))]
+connectionPathEndNodes_ Empty iCs = []
+connectionPathEndNodes_ n@(BNode x l r) iCs
   | any
        (\y ->
              fst (snd x) == y)
@@ -150,12 +156,12 @@ connectionPathEndNodes_ iCs n@(BNode x l r)
             iCs =
       [n]
   | fst (snd x) == "suc" =
-      [n] ++ connectionPathEndNodes_ iCs l ++ connectionPathEndNodes_ iCs r
-  | otherwise = connectionPathEndNodes_ iCs l ++ connectionPathEndNodes_ iCs r
+      [n] ++ connectionPathEndNodes_ l iCs ++ connectionPathEndNodes_ r iCs
+  | otherwise = connectionPathEndNodes_ l iCs ++ connectionPathEndNodes_ r iCs
 
-instanceChildren :: BTree (AbstractState, (String, Int))
+instanceChildren :: BTree (AbstractState, (String, Int)) -> BTree (AbstractState, (String, Int))
                  -> [BTree (AbstractState, (String, Int))]
-instanceChildren graph =
+instanceChildren graph startNode =
     fix
         (\f n is ->
               case n of
@@ -173,7 +179,7 @@ instanceChildren graph =
                            | x == "instanceChild" ] ++
                            f l ++ f r
                        Empty -> [])
-             graph)
+             startNode)
 
 -- theta `subDif` (sigma `compose` theta) == sigma
 subDif
@@ -207,11 +213,12 @@ unifiersAppliedOnPath (BNode (([(_,t,_)],_),_) _ _,BNode (((_,s,_):_,_),_) _ _) 
 
 encodeConnectionPaths
     :: BTree (AbstractState, (String, Int))
+    -> [BTree (AbstractState, (String, Int))]
     -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) IO [Rule']
-encodeConnectionPaths graph =
+encodeConnectionPaths graph iCs =
     fmap
         concat
-        (mapM encodeConnectionPath (connectionPathStartAndEndNodes graph))
+        (mapM encodeConnectionPath (connectionPathStartAndEndNodes graph iCs))
 
 encodeConnectionPath
     :: (BTree (AbstractState, (String, Int)), BTree (AbstractState, (String, Int)))
@@ -311,6 +318,36 @@ getUFunctionSymbol x y =
                   ((\(BNode x _ _) ->
                          x)
                        y)))
+
+assertDecomposability
+    :: Applicative f
+    => BTree (AbstractState, (String, Int)) -> [Int] -> f ()
+assertDecomposability graph mulSplitNodes =
+    when
+        (any
+             (\i ->
+                   any
+                       (\x ->
+                             isJust (getNode x i))
+                       (instanceChildren graph (fromJust (getNode graph i))))
+             mulSplitNodes)
+        (error "The graph is not decomposable. Aborting analysis.")
+
+getNode
+    :: BTree (AbstractState, (String, Int))
+    -> Int
+    -> Maybe (BTree (AbstractState, (String, Int)))
+getNode graph i =
+    listToMaybe
+        (fix
+             (\f n ->
+                   case n of
+                       BNode (_,(_,j)) l r ->
+                           if i == j
+                               then [n]
+                               else f l ++ f r
+                       Empty -> [])
+             graph)
 
 generateSubGraphsForMultSplit
     :: BTree (AbstractState, (String, Int))
