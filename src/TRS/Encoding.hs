@@ -4,7 +4,7 @@ import Control.Monad.State
 import SymbolicEvaluationGraphs.Types (AbstractState, G)
 import SymbolicEvaluationGraphs.InferenceRules (nextG)
 import ExprToTerm.Conversion (Term', Subst', Rule')
-import Data.List (intersect, union, nub, nubBy)
+import Data.List (intersect, union, nub, nubBy, (\\))
 import Data.Map
        (Map, difference, fromList, toList, intersectionWith)
 import qualified Data.Map (filter)
@@ -46,7 +46,8 @@ encodeOut
 encodeOut (BNode (([(ts,_,_)],(g,_)),("instance",_)) l@(BNode (([(_,mu,_)],_),("instanceChild",_)) Empty Empty) _) =
     fmap (apply mu) (encodeOut l)
 encodeOut (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) = do
-    gOut <- nextGOnQuery ts g
+    nG <- nextGOnQuery ts g
+    let gOut = nub nG \\ g
     return (Fun ("fout_s" ++ show i) gOut)
 encodeOut _ = error "Cannot encode abstract state: multiple goals."
 

@@ -1,26 +1,26 @@
-(VAR T17 T35 T39 T70 T47)
+(VAR T17 T37 T43 T78 T53)
 (RULES
 fin_s0(T17) ->
   u_s0_s4(fin_s4(T17),T17)
-u_s0_s4(fout_s4(T17),T17) ->
-  fout_s0(T17)
-fin_s6(T35) -> fout_s6(T35)
-fin_s6(T39) ->
-  u_s6_s12(fin_s12(T39),T39)
-u_s6_s12(fout_s12(T39),T39) ->
-  fout_s6(T39)
-fin_s18(s(T70)) ->
-  u_s18_s21(fin_s0(T70),T70)
-u_s18_s21(fout_s0(T70),T70) ->
-  fout_s18(s(T70))
-fin_s12(s(T47)) ->
-  u_s12_s15(fin_s12(T47),T47)
-u_s12_s15(fout_s12(T47),T47) ->
-  fout_s12(s(T47))
+u_s0_s4(fout_s4(),T17) ->
+  fout_s0()
+fin_s6(T37) -> fout_s6()
+fin_s6(T43) ->
+  u_s6_s12(fin_s12(T43),T43)
+u_s6_s12(fout_s12(),T43) ->
+  fout_s6()
+fin_s18(s(T78)) ->
+  u_s18_s21(fin_s0(T78),T78)
+u_s18_s21(fout_s0(),T78) ->
+  fout_s18()
+fin_s12(s(T53)) ->
+  u_s12_s15(fin_s12(T53),T53)
+u_s12_s15(fout_s12(),T53) ->
+  fout_s12()
 fin_s4(T17) ->
   u_s4_s6(fin_s6(T17),T17)
-u_s4_s6(fout_s6(T17),T17) ->
+u_s4_s6(fout_s6(),T17) ->
   u_s6_s18(fin_s18(T17),T17)
-u_s6_s18(fout_s18(T17),T17) ->
-  fout_s4(T17)
+u_s6_s18(fout_s18(),T17) ->
+  fout_s4()
 )
