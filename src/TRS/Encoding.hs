@@ -159,8 +159,10 @@ connectionPathEndNodes_ n@(BNode x l r) iCs
       [n] ++ connectionPathEndNodes_ l iCs ++ connectionPathEndNodes_ r iCs
   | otherwise = connectionPathEndNodes_ l iCs ++ connectionPathEndNodes_ r iCs
 
-instanceChildren :: BTree (AbstractState, (String, Int)) -> BTree (AbstractState, (String, Int))
-                 -> [BTree (AbstractState, (String, Int))]
+instanceChildren
+    :: BTree (AbstractState, (String, Int))
+    -> BTree (AbstractState, (String, Int))
+    -> [BTree (AbstractState, (String, Int))]
 instanceChildren graph startNode =
     fix
         (\f n is ->

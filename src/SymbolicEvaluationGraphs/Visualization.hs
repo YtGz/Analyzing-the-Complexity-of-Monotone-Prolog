@@ -205,7 +205,7 @@ showSubst' sub =
 
 showClause :: Maybe Clause -> String
 showClause Nothing = ""
-showClause (Just (h,b)) =
+showClause (Just (h,b)) = 
     showTerm' h ++ " :- " ++
     if isNothing b
         then ""
