@@ -47,10 +47,10 @@ encodeIn (BNode (([(_,_,_)],_),("instance",_)) l@(BNode (([(ts,mu,_)],(g,_)),("i
         (nub (concatMap ((map Var . vars) . apply mu) ts) `intersect`
          map (apply mu) g)
 encodeIn (BNode (([(_,_,_)],_),("noChildInstance",_)) l@(BNode (([(ts,mu,_)],(g,_)),("noChildInstanceChild",i)) Empty Empty) _) =
-   Fun
-       ("fin_s" ++ show i)
-       (nub (concatMap ((map Var . vars) . apply mu) ts) `intersect`
-        map (apply mu) g)
+    Fun
+        ("fin_s" ++ show i)
+        (nub (concatMap ((map Var . vars) . apply mu) ts) `intersect`
+         map (apply mu) g)
 encodeIn (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) =
     Fun ("fin_s" ++ show i) (nub (concatMap (map Var . vars) ts) `intersect` g)
 encodeIn _ = error "Cannot encode abstract state: multiple goals."
@@ -89,7 +89,10 @@ connectionPathStartNodes graph iCs =
                    case x of
                        BNode{} -> True
                        Empty -> False)
-             (graph :
+             ([ graph
+              | (\(BNode x _ _) ->
+                      fst (snd x) /= "instance" && fst (snd x) /= "split")
+                   graph ] ++
               fix
                   (\f n ->
                         case n of
@@ -117,12 +120,18 @@ connectionPathStartNodes graph iCs =
                                   | (\(BNode x _ _) ->
                                           fst (snd x))
                                        l `notElem`
-                                        ["instance", "split", "noChild", "noChildInstance"] ] ++
+                                        [ "instance"
+                                        , "split"
+                                        , "noChild"
+                                        , "noChildInstance"] ] ++
                                   [ r
                                   | (\(BNode x _ _) ->
                                           fst (snd x))
                                        r `notElem`
-                                        ["instance", "split", "noChild", "noChildInstance"] ] ++
+                                        [ "instance"
+                                        , "split"
+                                        , "noChild"
+                                        , "noChildInstance"] ] ++
                                   f l ++ f r
                               | otherwise -> f l ++ f r
                             Empty -> [])
@@ -399,15 +408,15 @@ endGraphAtMultSplitNodes
 endGraphAtMultSplitNodes Empty _ = Empty
 endGraphAtMultSplitNodes (BNode x l r) is =
     if snd (snd x) `elem` is && fst (snd x) /= "instanceChild"
-        then BNode
-                 x
-                 (f
-                      l)
-                 (f
-                      r)
+        then BNode x (f l) (f r)
         else BNode
                  x
                  (endGraphAtMultSplitNodes l is)
                  (endGraphAtMultSplitNodes r is)
-    where f (BNode (as,("instance",i)) (BNode (as',("instanceChild",i')) _ _) _) = BNode (as, ("noChildInstance", i)) (BNode (as',("noChildInstanceChild",i')) Empty Empty) Empty
-          f (BNode (as,(r,i)) _ _) = BNode (as, ("noChild", i)) Empty Empty
+  where
+    f (BNode (as,("instance",i)) (BNode (as',("instanceChild",i')) _ _) _) =
+        BNode
+            (as, ("noChildInstance", i))
+            (BNode (as', ("noChildInstanceChild", i')) Empty Empty)
+            Empty
+    f (BNode (as,(r,i)) _ _) = BNode (as, ("noChild", i)) Empty Empty
