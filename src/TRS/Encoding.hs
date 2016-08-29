@@ -46,6 +46,11 @@ encodeIn (BNode (([(_,_,_)],_),("instance",_)) l@(BNode (([(ts,mu,_)],(g,_)),("i
         ("fin_s" ++ show i)
         (nub (concatMap ((map Var . vars) . apply mu) ts) `intersect`
          map (apply mu) g)
+encodeIn (BNode (([(_,_,_)],_),("noChildInstance",_)) l@(BNode (([(ts,mu,_)],(g,_)),("noChildInstanceChild",i)) Empty Empty) _) =
+   Fun
+       ("fin_s" ++ show i)
+       (nub (concatMap ((map Var . vars) . apply mu) ts) `intersect`
+        map (apply mu) g)
 encodeIn (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) =
     Fun ("fin_s" ++ show i) (nub (concatMap (map Var . vars) ts) `intersect` g)
 encodeIn _ = error "Cannot encode abstract state: multiple goals."
@@ -54,6 +59,8 @@ encodeOut
     :: BTree (AbstractState, (String, Int))
     -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) IO Term'
 encodeOut (BNode (([(ts,_,_)],(g,_)),("instance",_)) l@(BNode (([(_,mu,_)],_),("instanceChild",_)) Empty Empty) _) =
+    fmap (apply mu) (encodeOut l)
+encodeOut (BNode (([(ts,_,_)],(g,_)),("noChildInstance",_)) l@(BNode (([(_,mu,_)],_),("noChildInstanceChild",_)) Empty Empty) _) =
     fmap (apply mu) (encodeOut l)
 encodeOut (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) = do
     nG <- nextGOnQuery ts g
@@ -65,7 +72,9 @@ nextGOnQuery :: [Term']
              -> G
              -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) IO G
 nextGOnQuery [] g = return g
-nextGOnQuery (x:xs) g = nextGOnQuery xs =<< nextG x g
+nextGOnQuery (x:xs) g =
+    let nG = nextG x g
+    in liftM2 union nG (nextGOnQuery xs =<< nG)
 
 connectionPathStartNodes
     :: BTree (AbstractState, (String, Int))
@@ -108,12 +117,12 @@ connectionPathStartNodes graph iCs =
                                   | (\(BNode x _ _) ->
                                           fst (snd x))
                                        l `notElem`
-                                        ["instance", "split", "noChild"] ] ++
+                                        ["instance", "split", "noChild", "noChildInstance"] ] ++
                                   [ r
                                   | (\(BNode x _ _) ->
                                           fst (snd x))
                                        r `notElem`
-                                        ["instance", "split", "noChild"] ] ++
+                                        ["instance", "split", "noChild", "noChildInstance"] ] ++
                                   f l ++ f r
                               | otherwise -> f l ++ f r
                             Empty -> [])
@@ -274,7 +283,7 @@ encodeSplitRules graph =
 encodeSplitRule
     :: BTree (AbstractState, (String, Int))
     -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) IO [Rule']
-encodeSplitRule s@(BNode _ s1@(BNode (((_,delta,_):_,_),_) _ _) s2) = do
+encodeSplitRule s@(BNode _ s1 s2@(BNode (((_,delta,_):_,_),(_,_)) _ _)) = do
     eOs <- encodeOut s
     eOs1 <- encodeOut s1
     eOs2 <- encodeOut s2
@@ -392,13 +401,13 @@ endGraphAtMultSplitNodes (BNode x l r) is =
     if snd (snd x) `elem` is && fst (snd x) /= "instanceChild"
         then BNode
                  x
-                 ((\(BNode (as,(r,i)) _ _) ->
-                        BNode (as, ("noChild", i)) Empty Empty)
+                 (f
                       l)
-                 ((\(BNode (as,(r,i)) _ _) ->
-                        BNode (as, ("noChild", i)) Empty Empty)
+                 (f
                       r)
         else BNode
                  x
                  (endGraphAtMultSplitNodes l is)
                  (endGraphAtMultSplitNodes r is)
+    where f (BNode (as,("instance",i)) (BNode (as',("instanceChild",i')) _ _) _) = BNode (as, ("noChildInstance", i)) (BNode (as',("noChildInstanceChild",i')) Empty Empty) Empty
+          f (BNode (as,(r,i)) _ _) = BNode (as, ("noChild", i)) Empty Empty

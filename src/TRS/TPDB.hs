@@ -21,7 +21,11 @@ saveFileInTPDBFormat filepath rules =
 
 concatSaveFileInTPDBFormat :: String -> [[Rule']] -> IO ()
 concatSaveFileInTPDBFormat filepath rules =
-    withFile filepath WriteMode (`hPutDoc` vcat (map getDocInTPDBFormat rules))
+    openFile filepath WriteMode >>= hClose >>
+    withFile
+        filepath
+        AppendMode
+        (`hPutDoc` vcat (map getDocInTPDBFormat rules))
 
 getDocInTPDBFormat :: [Rule'] -> Doc
 getDocInTPDBFormat rules =

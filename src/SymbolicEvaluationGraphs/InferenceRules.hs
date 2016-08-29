@@ -90,13 +90,6 @@ flattenLists
     :: (Monad m)
     => AbstractState -> Control.Monad.State.StateT Int m AbstractState
 flattenLists ((ts,s,c):ss,(g,u)) = do
-    sub' <-
-        Control.Monad.State.liftM
-            Data.Map.unions
-            (liftM2
-                 (++)
-                 (mapM (`flattenListsInTerm` Data.Map.empty) ts)
-                 (mapM (`flattenListsInTerm` Data.Map.empty) ts))
     sub <-
         Control.Monad.State.liftM
             Data.Map.unions
@@ -112,7 +105,22 @@ flattenLists ((ts,s,c):ss,(g,u)) = do
           , c) :
           ss
         , ( applyFlatteningToG g sub ((ts, s, c) : ss)
-          , map ((`applyFlattening` sub) *** (`applyFlattening` sub)) u))
+          , map
+                ((`applyFlattening` Data.Map.filterWithKey
+                                        (\k _ ->
+                                              case k of
+                                                  Fun ":" [_,Fun "[]" []] ->
+                                                      False
+                                                  _ -> True)
+                                        sub) ***
+                 (`applyFlattening` Data.Map.filterWithKey
+                                        (\k _ ->
+                                              case k of
+                                                  Fun ":" [_,Fun "[]" []] ->
+                                                      False
+                                                  _ -> True)
+                                        sub))
+                u))
 
 flattenListsInTerm
     :: (Monad m)
