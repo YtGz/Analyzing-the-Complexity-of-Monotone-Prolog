@@ -94,7 +94,7 @@ connectionPathStartNodes graph iCs =
                       fst (snd x) /= "instance" && fst (snd x) /= "split")
                    graph ] ++
               fix
-                  (\f n ->
+                  (\f n visited ->
                         case n of
                             BNode x l r
                               | fst (snd x) == "instance" ->
@@ -114,7 +114,12 @@ connectionPathStartNodes graph iCs =
                                                       x)
                                                     instanceChild)) `notElem`
                                            ["instance", "split"] ] ++
-                                     f l ++ f r
+                                     if snd (snd x) /= -1 &&
+                                        snd (snd x) `elem` visited
+                                         then []
+                                         else f
+                                                  instanceChild
+                                                  (snd (snd x) : visited)
                               | fst (snd x) == "split" ->
                                   [ l
                                   | (\(BNode x _ _) ->
@@ -132,10 +137,20 @@ connectionPathStartNodes graph iCs =
                                         , "split"
                                         , "noChild"
                                         , "noChildInstance"] ] ++
-                                  f l ++ f r
-                              | otherwise -> f l ++ f r
+                                  if snd (snd x) /= -1 &&
+                                     snd (snd x) `elem` visited
+                                      then []
+                                      else f l (snd (snd x) : visited) ++
+                                           f r (snd (snd x) : visited)
+                              | otherwise ->
+                                  if snd (snd x) /= -1 &&
+                                     snd (snd x) `elem` visited
+                                      then []
+                                      else f l (snd (snd x) : visited) ++
+                                           f r (snd (snd x) : visited)
                             Empty -> [])
-                  graph))
+                  graph
+                  []))
 
 connectionPathStartAndEndNodes
     :: BTree (AbstractState, (String, Int))
