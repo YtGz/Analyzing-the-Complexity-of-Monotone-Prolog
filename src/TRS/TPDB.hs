@@ -16,7 +16,7 @@ saveFileInTPDBFormat filepath rules =
         (`hPutDoc` (text
                         ("(VAR" ++ concatMap (" " ++) (nub (vars rules)) ++ ")") <$$>
                     text "(RULES" <$$>
-                    vcat (map (prettyRule (text "->") text text) rules) <$$>
+                    vcat (map (prettyRule (text "->") (text . concat . words) text) rules) <$$>
                     text ")"))
 
 concatSaveFileInTPDBFormat :: String -> [[Rule']] -> IO ()
@@ -31,5 +31,5 @@ getDocInTPDBFormat :: [Rule'] -> Doc
 getDocInTPDBFormat rules =
     text ("(VAR" ++ concatMap (" " ++) (nub (vars rules)) ++ ")") <$$>
     text "(RULES" <$$>
-    vcat (map (prettyRule (text "->") text text) rules) <$$>
+    vcat (map (prettyRule (text "->") (text . concat . words) text) rules) <$$>
     text ")"
