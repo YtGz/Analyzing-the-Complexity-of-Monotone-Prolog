@@ -12,7 +12,7 @@ import           SymbolicEvaluationGraphs.Utilities
 import           SymbolicEvaluationGraphs.InferenceRules
 import           SymbolicEvaluationGraphs.Visualization
 import           SymbolicEvaluationGraphs.Heuristic
-import           TRS.Encoding
+import           TRS.Encoding hiding (getNode)
 import           TRS.TPDB
 import           Data.Maybe
 import           Data.Map
@@ -185,6 +185,12 @@ getNode graph i = head (fix (\f n ->
 {-main = print (Data.Map.map (apply sigma) (Subst.toMap theta))
   where theta = Subst.fromMap (fromList [("T0", Fun "s" [Var "T5"]), ("T1", Var "T2")])
         sigma = Subst.fromMap (fromList [("T5", Fun "f" [Var "T7"]), ("T2", Var "T4")])-}
+
+{-main = let t = Fun "k" [Fun "s" [Fun "k" [Fun "s" [Fun "s" [Fun "0" []]]]], Fun "f" [], Var "x"] in
+       print (findFiniteGeneralizationPosition t)-}
+
+{-main = let s = ([([Fun "k" [Fun "s" [Fun "k" [Fun "s" [Fun "s" [Fun "0" []]]]], Fun "f" [], Var "x"]], Subst.fromMap (fromList []), Nothing)], ([],[])) in
+       print =<< evalStateT (applyGeneralizationStep s) 0-}
 
 --main = printArrayLineByLine (getMetaPredicates (Fun "," [Var "p", Fun ";" [Fun "f" [Fun "," [Var "r", Var "r"]], Var "q"]]))
 

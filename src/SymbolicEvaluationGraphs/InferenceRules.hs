@@ -26,22 +26,23 @@ import SymbolicEvaluationGraphs.Utilities
 import Diagrams.TwoD.Layout.Tree
 
 suc :: AbstractState -> AbstractState
-suc (state@(([],_,Nothing):_),kb) = (tail state, kb)
+suc (state@(([],_,Nothing):_),kb) = implicitGeneralization (tail state, kb)
 suc _ = error "Cannot apply 'suc': Malformed AbstractState"
 
 caseRule :: AbstractState -> AbstractState
 caseRule ((t:qs,sub,Nothing):s,kb) =
-    ( (let f clauseArray term substitution =
-               if null clauseArray
-                   then []
-                   else (term, substitution, head clauseArray) :
-                        f (tail clauseArray) term substitution
-       in f)
-          (map Just (slice t))
-          (t : qs)
-          sub ++
-      s
-    , kb)
+    implicitGeneralization
+        ( (let f clauseArray term substitution =
+                   if null clauseArray
+                       then []
+                       else (term, substitution, head clauseArray) :
+                            f (tail clauseArray) term substitution
+           in f)
+              (map Just (slice t))
+              (t : qs)
+              sub ++
+          s
+        , kb)
 caseRule _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 
 eval
@@ -82,8 +83,8 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
                          (Data.Map.elems (toMap mguG)))
               , map (apply mguGAndRenaming *** apply mguGAndRenaming) u_))
     return
-        ( removeUnnecessaryEntriesFromG s1
-        , removeUnnecessaryEntriesFromG (s, (g, u ++ [(t, h)])))
+        ( implicitGeneralization s1
+        , implicitGeneralization (s, (g, u ++ [(t, h)])))
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
 
 flattenLists
@@ -186,7 +187,7 @@ applyFlatteningToG g sub ((ts,_,_):ss) =
 
 backtrack :: AbstractState -> AbstractState
 backtrack (state@((_,_,Just _):_),kb) =
-    removeUnnecessaryEntriesFromG (tail state, kb)
+    implicitGeneralization (tail state, kb)
 
 root :: Term' -> String
 root (Var s) = s
@@ -223,6 +224,31 @@ restrictSubstToGForU sub g =
                         Data.Rewriting.Term.isVar v -- pure renaming
                    )
                   (toMap sub)))
+
+implicitGeneralization :: AbstractState -> AbstractState
+implicitGeneralization s =
+    removeUnnecessaryEntriesFromU (removeUnnecessaryEntriesFromG s)
+
+removeUnnecessaryEntriesFromU :: AbstractState -> AbstractState
+removeUnnecessaryEntriesFromU (ss,(g,u)) =
+    ( ss
+    , ( g
+      , filter
+            (\(x,y) ->
+                  not
+                      (null
+                           (vs `intersect`
+                            (Data.Rewriting.Term.vars x ++
+                             Data.Rewriting.Term.vars y))))
+            u))
+  where
+    vs =
+        concatMap
+            Data.Rewriting.Term.vars
+            (concatMap
+                 (\(x,_,_) ->
+                       x)
+                 ss)
 
 -- used after a split, eval or backtrack step; to remove vars from G which are no longer part of any term of the abstract state
 removeUnnecessaryEntriesFromG
@@ -312,9 +338,9 @@ split ([(t:qs,sub,Nothing)],(g,u)) = do
                   (\x ->
                         return (g `union` map (apply d) x))))
     return
-        ( removeUnnecessaryEntriesFromG
+        ( implicitGeneralization
               ([([t], fromMap (Data.Map.fromList []), Nothing)], (g, u))
-        , removeUnnecessaryEntriesFromG
+        , implicitGeneralization
               ( [(map (apply d) qs, d, Nothing)]
               , (g', map (apply d *** apply d) u)))
 
@@ -413,4 +439,4 @@ tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) ((([(qs',_,c')],(g',u')),(r,i)):xs) 
 tryToApplyInstanceRule n (_:xs) = tryToApplyInstanceRule n xs
 
 parallel :: AbstractState -> (AbstractState, AbstractState)
-parallel (ss,kb) = (([head ss], kb), (tail ss, kb))
+parallel (ss,kb) = (implicitGeneralization ([head ss], kb), implicitGeneralization (tail ss, kb))

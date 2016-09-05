@@ -16,12 +16,8 @@ u_s4_s5(fout_s5(T87,T88)
                        ,T87
                        ,T88)
 )
-(VAR T48 T85 T87 T88 T49 T50 T129 T130 T131)
+(VAR T129 T130 T131 T85 T87 T88 T147 T150 T148 T149)
 (RULES
-fin_s5(T48) ->
-  u_s4_s5(fin_s5(T85),T48)
-u_s4_s5(fout_s5(T87,T88),T48) ->
-  fout_s5(T49,T50)
 fin_s5(T129) -> fout_s5([]()
                        ,T129)
 fin_s5(T129) ->
@@ -32,6 +28,12 @@ fin_s5(T85) ->
   u_s5_s8(fin_s9(T85),T85)
 u_s5_s8(fout_s9(T87,T88),T85) ->
   fout_s5(T87,T88)
+fin_s9(:(T147,T150)) ->
+  u_s9_s10(fin_s5(T150),T147,T150)
+u_s9_s10(fout_s5(T148,T149)
+        ,T147
+        ,T150) -> fout_s9(:(T147,T148)
+                         ,T149)
 )
 (VAR T129 T130 T131 T85 T87 T88 T147 T150 T148 T149)
 (RULES

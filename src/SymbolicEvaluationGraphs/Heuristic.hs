@@ -5,18 +5,22 @@ module SymbolicEvaluationGraphs.Heuristic where
 import Data.Implicit
 import Data.Foldable (toList)
 import Data.Maybe
-import Data.List (find, nubBy, nub, (\\))
-import Data.Map (Map, fromList)
-import Control.Arrow ((***))
+import Data.List (find, nubBy, nub, (\\), maximumBy)
+import Data.Map (Map, fromList, insertWith, union, elemAt, keysSet)
+import qualified Data.Map (insert, toList, empty, map, lookup)
+import Control.Arrow ((***), second)
 import Control.Monad.State
 import Control.Monad.Extra (mapMaybeM)
 import Control.Monad.Morph
 import Control.Monad.Supply
 import Data.Either.Utils
 import Data.Tree.Zipper
+import Data.Ord (comparing)
+import Control.Lens (element, (.~))
 import ExprToTerm.Conversion
 import Query.Utilities
-import Data.Rewriting.Term (vars)
+import Data.Rewriting.Pos
+import Data.Rewriting.Term (vars, subtermAt, replaceAt)
 import Data.Rewriting.Term.Type (Term(..))
 import Data.Rewriting.Substitution (unify, apply)
 import Data.Rewriting.Substitution.Type (fromMap)
@@ -36,8 +40,14 @@ minExSteps = 1
 maxBranchingFactor :: Int
 maxBranchingFactor = 4
 
+finiteGeneralizationDepth :: Int
+finiteGeneralizationDepth = 2
+
+finiteGeneralizationPos :: Int
+finiteGeneralizationPos = 1
+
 graphSizeLimit :: Int
-graphSizeLimit = 160
+graphSizeLimit = 60
 
 generateSymbolicEvaluationGraph
     :: QueryClass
@@ -252,7 +262,7 @@ applyRule ioTp n = do
                                             (x, ("split", j)))
                                       tp))
                             cs1'
-                    let tp = 
+                    let tp =
                             insert
                                 (tree (snd cs1'))
                                 (Data.Tree.Zipper.last (children l))
@@ -446,7 +456,7 @@ getInstanceCandidates node graph = do
                    (getVarNum (fst node) >= getVarNum (fst x) ||
                     (isRecursive &&
                      branchingFactor (nodeHead node) > maxBranchingFactor)))
-             (toList graph))
+             (Data.Foldable.toList graph))
 
 nodeHead :: (AbstractState, (String, Int)) -> Term'
 nodeHead (((t:_,_,Nothing):_,_),_) =
@@ -672,6 +682,153 @@ branchingFactor (Fun f _) =
              (== Right f)
              (map (Data.Rewriting.Term.root . fst) (param_ :: [Clause])))
 branchingFactor _ = error "No function symbol provided."
+
+applyGeneralizationStep
+    :: (Monad m)
+    => AbstractState -> Control.Monad.State.StateT Int m AbstractState
+applyGeneralizationStep s = applyGeneralizationStep_ [] s (fst (snd s))
+
+applyGeneralizationStep_
+    :: (Monad m)
+    => [(Term', Term')]
+    -> AbstractState
+    -> G
+    -> Control.Monad.State.StateT Int m AbstractState
+applyGeneralizationStep_ r s g = do
+    let ts =
+            concat
+                (zipWith
+                     (\x y ->
+                           map
+                               (\x ->
+                                     (x, y))
+                               x)
+                     (map
+                          (\(x,_,_) ->
+                                zip x [0 ..])
+                          (fst s))
+                     [0 ..])
+        tAnnotated =
+            Data.List.find
+                (isJust . findFiniteGeneralizationPosition . fst . fst)
+                ts
+    if isJust tAnnotated
+        then do
+            let ((t,j),k) = fromJust tAnnotated
+                pos = fromJust (findFiniteGeneralizationPosition t)
+                fromR =
+                    find
+                        (\x ->
+                              fromJust (subtermAt t pos) == fst x)
+                        r
+            freshVar <- freshVariable
+            let (t',r',g')
+                  | isJust fromR =
+                      (fromJust (replaceAt t pos (snd (fromJust fromR))), r, g)
+                  | all
+                       (`elem` fst (snd s))
+                       (map Var (vars (fromJust (subtermAt t pos)))) =
+                      ( fromJust (replaceAt t pos freshVar)
+                      , (fromJust (subtermAt t pos), freshVar) : r
+                      , g ++ [freshVar])
+                  | otherwise =
+                      ( fromJust (replaceAt t pos freshVar)
+                      , (fromJust (subtermAt t pos), freshVar) : r
+                      , g)
+                s' =
+                    (\(ss,kb) ->
+                          ( (element k .~
+                             (\(x,y,z) ->
+                                   ((element j .~ t') x, y, z))
+                                 (ss !! k))
+                                ss
+                          , kb))
+                        s
+            applyGeneralizationStep_ r' s' g'
+        else return (fst s, (g, snd (snd s)))
+
+findFiniteGeneralizationPosition :: Term' -> Maybe Pos
+findFiniteGeneralizationPosition t =
+    let candidate =
+            fromList
+                [ second
+                      (\x ->
+                            fromList [x])
+                      (maximumBy
+                           (comparing (snd . snd))
+                           (Data.Map.toList
+                                (Data.Map.map
+                                     (maximumBy (comparing snd) .
+                                      Data.Map.toList)
+                                     (countFunctionSymbolOccurences
+                                          t
+                                          Data.Map.empty
+                                          []))))]
+    in if snd (elemAt 0 (snd (elemAt 0 candidate))) >=
+          finiteGeneralizationDepth
+           then let ePos = fst (elemAt 0 candidate)
+                in Just
+                       (fix
+                            (\f s t pos i (p:path) ->
+                                  case t of
+                                      Fun s' _
+                                        | s' == s ->
+                                            if i == finiteGeneralizationPos
+                                                then pos
+                                                else f
+                                                         s
+                                                         (fromJust
+                                                              (subtermAt t [p]))
+                                                         (pos ++ [p])
+                                                         (i + 1)
+                                                         path
+                                      _ ->
+                                          f
+                                              s
+                                              (fromJust (subtermAt t [p]))
+                                              (pos ++ [p])
+                                              i
+                                              path)
+                            (fst (elemAt 0 (snd (elemAt 0 candidate))))
+                            t
+                            []
+                            1
+                            ePos)
+           else Nothing
+
+countFunctionSymbolOccurences :: Term'
+                              -> Map Pos (Map String Int)
+                              -> Pos
+                              -> Map Pos (Map String Int)
+countFunctionSymbolOccurences (Fun f args) _ [] =
+    let m' =
+            Data.Map.insert
+                []
+                (Data.Map.insert f 1 Data.Map.empty)
+                Data.Map.empty
+    in foldl
+           union
+           m'
+           (zipWith
+                (\x y ->
+                      countFunctionSymbolOccurences x m' [y])
+                args
+                [0 ..])
+countFunctionSymbolOccurences (Fun f args) m pos =
+    let m' =
+            Data.Map.insert
+                pos
+                (insertWith (+) f 1 (fromJust (Data.Map.lookup (init pos) m)))
+                m
+    in foldl
+           union
+           m'
+           (zipWith
+                (\x y ->
+                      countFunctionSymbolOccurences x m' (pos ++ [y]))
+                args
+                [0 ..])
+countFunctionSymbolOccurences _ m _ = m
 
 bTreeToRoseTree :: BTree a -> Tree a
 bTreeToRoseTree (BNode e Empty Empty) = Node e []
