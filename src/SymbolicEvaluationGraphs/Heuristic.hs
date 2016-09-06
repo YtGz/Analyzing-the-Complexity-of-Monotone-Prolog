@@ -16,14 +16,14 @@ import Control.Monad.Supply
 import Data.Either.Utils
 import Data.Tree.Zipper
 import Data.Ord (comparing)
-import Control.Lens (element, (.~))
+import Control.Lens (element, (.~), (%~))
 import ExprToTerm.Conversion
 import Query.Utilities
 import Data.Rewriting.Pos
 import Data.Rewriting.Term (vars, subtermAt, replaceAt)
 import Data.Rewriting.Term.Type (Term(..))
 import Data.Rewriting.Substitution (unify, apply)
-import Data.Rewriting.Substitution.Type (fromMap)
+import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
@@ -45,7 +45,7 @@ finiteGeneralizationDepth :: Int
 finiteGeneralizationDepth = 2
 
 finiteGeneralizationPos :: Int
-finiteGeneralizationPos = 1
+finiteGeneralizationPos = 2
 
 graphSizeLimit :: Int
 graphSizeLimit = 40
@@ -749,7 +749,20 @@ applyGeneralizationStep_ r s g = do
                           (\(lhs,rhs) ->
                                 [(lhs, 0), (rhs, 1)])
                           (snd (snd s)))
-                     (concatMap (replicate 2) [0 ..]))
+                     (concatMap (replicate 2) [0 ..])) ++
+            map (\x -> (x, "sub"))
+              (concat
+                   (zipWith
+                        (\x y ->
+                              map
+                                  (\x ->
+                                        (x, y))
+                                  x)
+                        (map
+                             (\(_,x,_) ->
+                                   zip (map snd (Data.Map.toList (toMap x))) [0 ..])
+                             (fst s))
+                        [0 ..]))
         tAnnotated =
             Data.List.find
                 (isJust . findFiniteGeneralizationPosition . fst . fst . fst)
@@ -767,7 +780,7 @@ applyGeneralizationStep_ r s g = do
             let (t',r',g')
                   | isJust fromR =
                       (fromJust (replaceAt t pos (snd (fromJust fromR))), r, g)
-                  | all
+                  | not (null (map Var (vars (fromJust (subtermAt t pos))))) && all
                        (`elem` fst (snd s))
                        (map Var (vars (fromJust (subtermAt t pos)))) =
                       ( fromJust (replaceAt t pos freshVar)
@@ -783,6 +796,15 @@ applyGeneralizationStep_ r s g = do
                             ( (element k .~
                                (\(x,y,z) ->
                                      ((element j .~ t') x, y, z))
+                                   (ss !! k))
+                                  ss
+                            , kb))
+                          s
+                  | l == "sub" =
+                      (\(ss,kb) ->
+                            ( (element k .~
+                               (\(x,y,z) ->
+                                     (x, fromMap (fromList ((element j %~ (\(x,_) -> (x,t'))) (Data.Map.toList (toMap y)))), z))
                                    (ss !! k))
                                   ss
                             , kb))
