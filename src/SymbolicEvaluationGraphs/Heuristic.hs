@@ -27,7 +27,7 @@ import Data.Rewriting.Substitution.Type (fromMap)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
-        tryToApplyInstanceRule, parallel, arityOfRootSymbol)
+        tryToApplyInstanceRule, parallel, arityOfRootSymbol, implicitGeneralization)
 import SymbolicEvaluationGraphs.Utilities
        (freshVariable, instantiateWithFreshVariables)
 import Data.Tree
@@ -47,7 +47,7 @@ finiteGeneralizationPos :: Int
 finiteGeneralizationPos = 1
 
 graphSizeLimit :: Int
-graphSizeLimit = 60
+graphSizeLimit = 40
 
 generateSymbolicEvaluationGraph
     :: QueryClass
@@ -303,6 +303,23 @@ applyRule ioTp n = do
                                             tp)
                                        (Just (caseRule s, ("", -1)), Nothing))))
                         (n + 1)
+                gS = do
+                    let j = snd (snd (label tp))
+                    j <-
+                        if j == -1
+                            then supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            else return j
+                    genStep <- applyGeneralizationStep s
+                    applyRule
+                        (return
+                             (fst
+                                  (insertAndMoveToChild
+                                       (modifyLabel
+                                            (\(x,_) ->
+                                                  (x, ("generalization", j)))
+                                            tp)
+                                       (Just (implicitGeneralization genStep, ("", -1)), Nothing))))
+                        (n + 1)
             case s of
                 ([],_) ->
                     return
@@ -379,11 +396,20 @@ applyRule ioTp n = do
                                          else do
                                              i' <- i
                                              maybe
-                                                 (case s of
-                                                      (([_],_,Nothing):_,_) ->
-                                                          c
-                                                      (([_],_,_):_,_) -> e
-                                                      _ -> sp)
+                                                 (if any
+                                                         (isJust .
+                                                          findFiniteGeneralizationPosition)
+                                                         (concatMap
+                                                              (\(x,_,_) ->
+                                                                    x)
+                                                              (fst s))
+                                                      then gS
+                                                      else (case s of
+                                                                (([_],_,Nothing):_,_) ->
+                                                                    c
+                                                                (([_],_,_):_,_) ->
+                                                                    e
+                                                                _ -> sp))
                                                  return
                                                  i'
                                 else case s of
@@ -695,8 +721,8 @@ applyGeneralizationStep_
     -> G
     -> Control.Monad.State.StateT Int m AbstractState
 applyGeneralizationStep_ r s g = do
-    let ts =
-            concat
+    let ts = map (\x -> (x,"s"))
+            (concat
                 (zipWith
                      (\x y ->
                            map
@@ -707,14 +733,15 @@ applyGeneralizationStep_ r s g = do
                           (\(x,_,_) ->
                                 zip x [0 ..])
                           (fst s))
-                     [0 ..])
+                     [0 ..]))
+                     ++ map (\x -> (x,"kb")) (zip (concatMap (\(lhs,rhs) -> [(lhs,0),(rhs,1)]) (snd (snd s))) (concatMap (replicate 2) [0 ..]))
         tAnnotated =
             Data.List.find
-                (isJust . findFiniteGeneralizationPosition . fst . fst)
+                (isJust . findFiniteGeneralizationPosition . fst . fst . fst)
                 ts
     if isJust tAnnotated
         then do
-            let ((t,j),k) = fromJust tAnnotated
+            let (((t,j),k),l) = fromJust tAnnotated
                 pos = fromJust (findFiniteGeneralizationPosition t)
                 fromR =
                     find
@@ -735,7 +762,8 @@ applyGeneralizationStep_ r s g = do
                       ( fromJust (replaceAt t pos freshVar)
                       , (fromJust (subtermAt t pos), freshVar) : r
                       , g)
-                s' =
+                s'
+                  | l == "s" =
                     (\(ss,kb) ->
                           ( (element k .~
                              (\(x,y,z) ->
@@ -743,6 +771,14 @@ applyGeneralizationStep_ r s g = do
                                  (ss !! k))
                                 ss
                           , kb))
+                        s
+                  | l == "kb" && j == 0 =
+                    (\(ss,(g,u)) ->
+                        (ss, (g, (element k .~ (t', snd (u !! k))) u)))
+                        s
+                  | l == "kb" && j == 1 =
+                    (\(ss,(g,u)) ->
+                        (ss, (g, (element k .~ (fst (u !! k), t')) u)))
                         s
             applyGeneralizationStep_ r' s' g'
         else return (fst s, (g, snd (snd s)))
@@ -769,7 +805,7 @@ findFiniteGeneralizationPosition t =
            then let ePos = fst (elemAt 0 candidate)
                 in Just
                        (fix
-                            (\f s t pos i (p:path) ->
+                            (\f s t pos i path ->
                                   case t of
                                       Fun s' _
                                         | s' == s ->
@@ -778,17 +814,17 @@ findFiniteGeneralizationPosition t =
                                                 else f
                                                          s
                                                          (fromJust
-                                                              (subtermAt t [p]))
-                                                         (pos ++ [p])
+                                                              (subtermAt t [head path]))
+                                                         (pos ++ [head path])
                                                          (i + 1)
-                                                         path
+                                                         (tail path)
                                       _ ->
                                           f
                                               s
-                                              (fromJust (subtermAt t [p]))
-                                              (pos ++ [p])
+                                              (fromJust (subtermAt t [head path]))
+                                              (pos ++ [head path])
                                               i
-                                              path)
+                                              (tail path))
                             (fst (elemAt 0 (snd (elemAt 0 candidate))))
                             t
                             []

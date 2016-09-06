@@ -64,9 +64,7 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
         (Just mgu) = unify t_ h_
         mguG = restrictSubstToG mgu g_
         mguGAndRenaming = restrictSubstToGForU mgu g_
-    s1 <-
-        flattenLists
-            ( ( map
+    let s1 = ( ( map
                     (apply mgu)
                     (maybe [] splitClauseBody (listToMaybe b_) ++ qs)
               , compose mgu sub_
@@ -226,31 +224,26 @@ restrictSubstToGForU sub g =
                   (toMap sub)))
 
 implicitGeneralization :: AbstractState -> AbstractState
-implicitGeneralization s =
-    removeUnnecessaryEntriesFromU (removeUnnecessaryEntriesFromG s)
+implicitGeneralization s = removeUnnecessaryEntriesFromU (removeUnnecessaryEntriesFromG s)
 
+-- remove term pairs from U for which the left hand side is not equal to (a subterm of) any term of the abstract state
+-- TODO: look at example 6.3 from Stroeder: from KB1 to KB2 - how?
 removeUnnecessaryEntriesFromU :: AbstractState -> AbstractState
 removeUnnecessaryEntriesFromU (ss,(g,u)) =
     ( ss
     , ( g
       , filter
-            (\(x,y) ->
-                  not
-                      (null
-                           (vs `intersect`
-                            (Data.Rewriting.Term.vars x ++
-                             Data.Rewriting.Term.vars y))))
+            (\(x,_) ->
+                  any (\t -> x `elem` Data.Rewriting.Term.subterms t) ts)
             u))
   where
-    vs =
-        concatMap
-            Data.Rewriting.Term.vars
-            (concatMap
+    ts =
+            concatMap
                  (\(x,_,_) ->
                        x)
-                 ss)
+                 ss
 
--- used after a split, eval or backtrack step; to remove vars from G which are no longer part of any term of the abstract state
+-- remove vars from G which are no longer part of any term of the abstract state
 removeUnnecessaryEntriesFromG
     :: AbstractState -> AbstractState
 removeUnnecessaryEntriesFromG (ss,(g,u)) = (ss, (filter (`elem` vs) g, u))
