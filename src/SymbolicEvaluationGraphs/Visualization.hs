@@ -146,7 +146,7 @@ printAbstractState ((gs,(g,u)),(s,i)) =
   where
     label =
         if s == "split"
-            then (\x ->
+            then (\x -> 
                        x ||| (strutX 1.2 ||| write "||" ||| strutX 1.2) |||
                        write (show i))
             else id
@@ -205,7 +205,7 @@ showSubst' sub =
 
 showClause :: Maybe Clause -> String
 showClause Nothing = ""
-showClause (Just (h,b)) = 
+showClause (Just (h,b)) =
     showTerm' h ++ " :- " ++
     if isNothing b
         then ""

@@ -64,7 +64,8 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
         (Just mgu) = unify t_ h_
         mguG = restrictSubstToG mgu g_
         mguGAndRenaming = restrictSubstToGForU mgu g_
-    let s1 = ( ( map
+    let s1 =
+            ( ( map
                     (apply mgu)
                     (maybe [] splitClauseBody (listToMaybe b_) ++ qs)
               , compose mgu sub_
@@ -184,8 +185,7 @@ applyFlatteningToG g sub ((ts,_,_):ss) =
              sub)
 
 backtrack :: AbstractState -> AbstractState
-backtrack (state@((_,_,Just _):_),kb) =
-    implicitGeneralization (tail state, kb)
+backtrack (state@((_,_,Just _):_),kb) = implicitGeneralization (tail state, kb)
 
 root :: Term' -> String
 root (Var s) = s
@@ -224,24 +224,29 @@ restrictSubstToGForU sub g =
                   (toMap sub)))
 
 implicitGeneralization :: AbstractState -> AbstractState
-implicitGeneralization s = removeUnnecessaryEntriesFromU (removeUnnecessaryEntriesFromG s)
+implicitGeneralization s =
+    removeUnnecessaryEntriesFromU (removeUnnecessaryEntriesFromG s)
 
 -- remove term pairs from U for which the left hand side is not equal to (a subterm of) any term of the abstract state
 -- TODO: look at example 6.3 from Stroeder: from KB1 to KB2 - how?
-removeUnnecessaryEntriesFromU :: AbstractState -> AbstractState
+removeUnnecessaryEntriesFromU
+    :: AbstractState -> AbstractState
 removeUnnecessaryEntriesFromU (ss,(g,u)) =
     ( ss
     , ( g
       , filter
             (\(x,_) ->
-                  any (\t -> x `elem` Data.Rewriting.Term.subterms t) ts)
+                  any
+                      (\t ->
+                            x `elem` Data.Rewriting.Term.subterms t)
+                      ts)
             u))
   where
     ts =
-            concatMap
-                 (\(x,_,_) ->
-                       x)
-                 ss
+        concatMap
+            (\(x,_,_) ->
+                  x)
+            ss
 
 -- remove vars from G which are no longer part of any term of the abstract state
 removeUnnecessaryEntriesFromG
@@ -432,4 +437,6 @@ tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) ((([(qs',_,c')],(g',u')),(r,i)):xs) 
 tryToApplyInstanceRule n (_:xs) = tryToApplyInstanceRule n xs
 
 parallel :: AbstractState -> (AbstractState, AbstractState)
-parallel (ss,kb) = (implicitGeneralization ([head ss], kb), implicitGeneralization (tail ss, kb))
+parallel (ss,kb) =
+    ( implicitGeneralization ([head ss], kb)
+    , implicitGeneralization (tail ss, kb))

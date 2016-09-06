@@ -27,7 +27,8 @@ import Data.Rewriting.Substitution.Type (fromMap)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
-        tryToApplyInstanceRule, parallel, arityOfRootSymbol, implicitGeneralization)
+        tryToApplyInstanceRule, parallel, arityOfRootSymbol,
+        implicitGeneralization)
 import SymbolicEvaluationGraphs.Utilities
        (freshVariable, instantiateWithFreshVariables)
 import Data.Tree
@@ -318,7 +319,10 @@ applyRule ioTp n = do
                                             (\(x,_) ->
                                                   (x, ("generalization", j)))
                                             tp)
-                                       (Just (implicitGeneralization genStep, ("", -1)), Nothing))))
+                                       ( Just
+                                             ( implicitGeneralization genStep
+                                             , ("", -1))
+                                       , Nothing))))
                         (n + 1)
             case s of
                 ([],_) ->
@@ -721,20 +725,31 @@ applyGeneralizationStep_
     -> G
     -> Control.Monad.State.StateT Int m AbstractState
 applyGeneralizationStep_ r s g = do
-    let ts = map (\x -> (x,"s"))
-            (concat
-                (zipWith
-                     (\x y ->
-                           map
-                               (\x ->
-                                     (x, y))
-                               x)
-                     (map
-                          (\(x,_,_) ->
-                                zip x [0 ..])
-                          (fst s))
-                     [0 ..]))
-                     ++ map (\x -> (x,"kb")) (zip (concatMap (\(lhs,rhs) -> [(lhs,0),(rhs,1)]) (snd (snd s))) (concatMap (replicate 2) [0 ..]))
+    let ts =
+            map
+                (\x ->
+                      (x, "s"))
+                (concat
+                     (zipWith
+                          (\x y ->
+                                map
+                                    (\x ->
+                                          (x, y))
+                                    x)
+                          (map
+                               (\(x,_,_) ->
+                                     zip x [0 ..])
+                               (fst s))
+                          [0 ..])) ++
+            map
+                (\x ->
+                      (x, "kb"))
+                (zip
+                     (concatMap
+                          (\(lhs,rhs) ->
+                                [(lhs, 0), (rhs, 1)])
+                          (snd (snd s)))
+                     (concatMap (replicate 2) [0 ..]))
         tAnnotated =
             Data.List.find
                 (isJust . findFiniteGeneralizationPosition . fst . fst . fst)
@@ -764,22 +779,22 @@ applyGeneralizationStep_ r s g = do
                       , g)
                 s'
                   | l == "s" =
-                    (\(ss,kb) ->
-                          ( (element k .~
-                             (\(x,y,z) ->
-                                   ((element j .~ t') x, y, z))
-                                 (ss !! k))
-                                ss
-                          , kb))
-                        s
+                      (\(ss,kb) ->
+                            ( (element k .~
+                               (\(x,y,z) ->
+                                     ((element j .~ t') x, y, z))
+                                   (ss !! k))
+                                  ss
+                            , kb))
+                          s
                   | l == "kb" && j == 0 =
-                    (\(ss,(g,u)) ->
-                        (ss, (g, (element k .~ (t', snd (u !! k))) u)))
-                        s
+                      (\(ss,(g,u)) ->
+                            (ss, (g, (element k .~ (t', snd (u !! k))) u)))
+                          s
                   | l == "kb" && j == 1 =
-                    (\(ss,(g,u)) ->
-                        (ss, (g, (element k .~ (fst (u !! k), t')) u)))
-                        s
+                      (\(ss,(g,u)) ->
+                            (ss, (g, (element k .~ (fst (u !! k), t')) u)))
+                          s
             applyGeneralizationStep_ r' s' g'
         else return (fst s, (g, snd (snd s)))
 
@@ -814,14 +829,17 @@ findFiniteGeneralizationPosition t =
                                                 else f
                                                          s
                                                          (fromJust
-                                                              (subtermAt t [head path]))
+                                                              (subtermAt
+                                                                   t
+                                                                   [head path]))
                                                          (pos ++ [head path])
                                                          (i + 1)
                                                          (tail path)
                                       _ ->
                                           f
                                               s
-                                              (fromJust (subtermAt t [head path]))
+                                              (fromJust
+                                                   (subtermAt t [head path]))
                                               (pos ++ [head path])
                                               i
                                               (tail path))

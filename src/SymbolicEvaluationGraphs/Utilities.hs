@@ -22,8 +22,13 @@ import Text.Read (readMaybe)
 import Data.Maybe
 import Data.List (nub)
 
-freshVariable :: (Monad m) => Control.Monad.State.StateT Int m Term'
-freshVariable = Control.Monad.State.state (\i -> (Var ("T" ++ show i),i+1))
+freshVariable
+    :: (Monad m)
+    => Control.Monad.State.StateT Int m Term'
+freshVariable =
+    Control.Monad.State.state
+        (\i ->
+              (Var ("T" ++ show i), i + 1))
 
 {-instantiateWithFreshVariables
   :: (Monad m)
@@ -38,20 +43,14 @@ instantiateWithFreshVariables h b =
   in do freshVariables <- mapFreshVariables (return vs)
         let sub = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
         return (apply sub h, fmap (apply sub) b)-}
-
 instantiateWithFreshVariables
-  :: (Monad m)
-  => [Term'] -> Control.Monad.State.StateT Int m ([Term'], Subst')
+    :: (Monad m)
+    => [Term'] -> Control.Monad.State.StateT Int m ([Term'], Subst')
 instantiateWithFreshVariables ts =
-  let vs =
-          map
-              Var
-              (nub
-                        (concatMap Data.Rewriting.Term.vars
-                        ts))
-  in do freshVariables <- mapFreshVariables (return vs)
-        let sub = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
-        return (map (apply sub) ts, sub)
+    let vs = map Var (nub (concatMap Data.Rewriting.Term.vars ts))
+    in do freshVariables <- mapFreshVariables (return vs)
+          let sub = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
+          return (map (apply sub) ts, sub)
 
 --TODO: there has to be a higher-order function that can be used instead
 mapFreshVariables
