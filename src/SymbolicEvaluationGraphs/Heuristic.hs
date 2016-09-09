@@ -42,13 +42,13 @@ maxBranchingFactor :: Int
 maxBranchingFactor = 4
 
 finiteGeneralizationDepth :: Int
-finiteGeneralizationDepth = 2
+finiteGeneralizationDepth = 8
 
 finiteGeneralizationPos :: Int
-finiteGeneralizationPos = 1
+finiteGeneralizationPos = 2
 
 graphSizeLimit :: Int
-graphSizeLimit = 40
+graphSizeLimit = 400
 
 generateSymbolicEvaluationGraph
     :: QueryClass

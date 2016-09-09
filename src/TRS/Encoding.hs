@@ -41,16 +41,10 @@ generateRewriteRulesForGraphsWithMultSplitNodes graph mulSplitNodes = do
     mapM (`generateRewriteRules_` iCs) subGraphs
 
 encodeIn :: BTree (AbstractState, (String, Int)) -> Term'
-encodeIn (BNode (_,("instance",_)) l@(BNode (([(ts,mu,_)],(g,_)),("instanceChild",i)) Empty Empty) _) =
-    Fun
-        ("fin_s" ++ show i)
-        (nub (concatMap ((map Var . vars) . apply mu) ts) `intersect`
-         map (apply mu) g)
-encodeIn (BNode (_,("noChildInstance",_)) l@(BNode (([(ts,mu,_)],(g,_)),("noChildInstanceChild",i)) Empty Empty) _) =
-    Fun
-        ("fin_s" ++ show i)
-        (nub (concatMap ((map Var . vars) . apply mu) ts) `intersect`
-         map (apply mu) g)
+encodeIn (BNode (_,("instance",_)) l@(BNode (([(_,mu,_)],(_,_)),("instanceChild",_)) Empty Empty) _) =
+    apply mu (encodeIn l)
+encodeIn (BNode (_,("noChildInstance",_)) l@(BNode (([(_,mu,_)],(_,_)),("noChildInstanceChild",_)) Empty Empty) _) =
+    apply mu (encodeIn l)
 encodeIn (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) =
     Fun ("fin_s" ++ show i) (nub (concatMap (map Var . vars) ts) `intersect` g)
 encodeIn _ = error "Cannot encode abstract state: multiple goals."
