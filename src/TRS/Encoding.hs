@@ -271,11 +271,11 @@ encodeConnectionPath (s,e) =
                       (Fun
                            (getUFunctionSymbol s e)
                            (encodeIn e :
-                            map Var (vars (apply sub (encodeIn s)))))
+                           nub ((\(Fun _ ts) -> ts) (apply sub (encodeIn s)))))
                 , Rule
                       (Fun
                            (getUFunctionSymbol s e)
-                           (eOsk : map Var (vars (apply sub (encodeIn s)))))
+                           (eOsk : nub ((\(Fun _ ts) -> ts) (apply sub (encodeIn s)))))
                       (apply sub eOs1)]
   where
     sub = unifiersAppliedOnPath (s, e)
@@ -310,22 +310,22 @@ encodeSplitRule s@(BNode _ s1 s2@(BNode (((_,delta,_):_,_),(_,_)) _ _)) = do
               (encodeIn s)
               (Fun
                    (getUFunctionSymbol s s1)
-                   (encodeIn s1 : map Var (vars (encodeIn s))))
+                   (encodeIn s1 : nub ((\(Fun _ ts) -> ts) (encodeIn s))))
         , Rule
               (Fun
                    (getUFunctionSymbol s s1)
-                   (apply delta eOs1 : map Var (vars (encodeIn s))))
+                   (apply delta eOs1 : nub ((\(Fun _ ts) -> ts) (encodeIn s))))
               (Fun
                    (getUFunctionSymbol s1 s2)
                    (encodeIn s2 :
-                    map Var (vars (encodeIn s)) `union`
-                    map Var (vars (apply delta eOs1))))
+                   nub ((\(Fun _ ts) -> ts) (encodeIn s)) `union`
+                   nub ((\(Fun _ ts) -> ts) (apply delta eOs1))))
         , Rule
               (Fun
                    (getUFunctionSymbol s1 s2)
                    (eOs2 :
-                    map Var (vars (encodeIn s)) `union`
-                    map Var (vars (apply delta eOs1))))
+                    nub ((\(Fun _ ts) -> ts) (encodeIn s)) `union`
+                    nub ((\(Fun _ ts) -> ts) (apply delta eOs1))))
               (apply delta eOs)]
 
 getUFunctionSymbol
