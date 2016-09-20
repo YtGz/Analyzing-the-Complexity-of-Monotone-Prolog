@@ -5,7 +5,8 @@ module SymbolicEvaluationGraphs.Utilities
   ,isAbstractVariable
   ,hasNoAbstractVariables
   ,termToClause
-  ,splitClauseBody)
+  ,splitClauseBody
+  ,applyToSubKeys)
   where
 
 import Data.IORef
@@ -16,15 +17,16 @@ import ExprToTerm.Conversion
 import Data.Rewriting.Term.Type (Term(..))
 import SymbolicEvaluationGraphs.Types
 import Data.Rewriting.Substitution (unify, apply)
-import Data.Rewriting.Substitution.Type (fromMap)
+import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import Data.Rewriting.Term (vars)
 import Text.Read (readMaybe)
 import Data.Maybe
 import Data.List (nub)
+import Data.Map (Map, fromList, toList, unions, empty)
 
 freshVariable
     :: (Monad m)
-    => Control.Monad.State.StateT Int m Term'
+    => (Control.Monad.State.StateT Int m) Term'
 freshVariable =
     Control.Monad.State.state
         (\i ->
@@ -32,7 +34,7 @@ freshVariable =
 
 {-instantiateWithFreshVariables
   :: (Monad m)
-  => Term' -> Maybe Term' -> Control.Monad.State.StateT Int m (Term', Maybe Term')
+  => Term' -> Maybe Term' -> Control.Monad.State.StateT (Data.Map.Map Int Subst') (Control.Monad.State.StateT Int m) (Term', Maybe Term')
 instantiateWithFreshVariables h b =
   let vs =
           map
@@ -89,3 +91,26 @@ termToClause _ = error "Cannot apply 'exprToClause': Malformed Clause"
 splitClauseBody :: Term' -> [Term']
 splitClauseBody (Fun "," bs) = concatMap splitClauseBody bs
 splitClauseBody b = [b]
+
+applyToSubKeys :: Subst' -> Subst' -> Subst'
+applyToSubKeys s s' = fromMap (applyToSubKeys_ (toList (toMap s)) s')
+
+applyToSubKeys_ :: [(String, Term')] -> Subst' -> Map String Term'
+applyToSubKeys_ [] _ = Data.Map.empty
+applyToSubKeys_ (s:ss) s' =
+    Data.Map.unions
+        (applyToSubKeys_ ss s' :
+         map
+             (applyToSubKeys__ (snd s) . snd)
+             (filter
+                  (\(x,_) ->
+                        x == fst s)
+                  (toList (toMap s'))))
+
+applyToSubKeys__ :: Term' -> Term' -> Map String Term'
+applyToSubKeys__ (Var x) f = fromList [(x, f)]
+applyToSubKeys__ (Fun f args) e@(Fun f' args') =
+    if f == f' && length args == length args'
+        then Data.Map.unions (zipWith applyToSubKeys__ args args')
+        else Data.Map.empty
+applyToSubKeys__ _ _ = Data.Map.empty

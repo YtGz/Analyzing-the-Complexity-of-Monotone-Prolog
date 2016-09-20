@@ -5,12 +5,13 @@ module SymbolicEvaluationGraphs.InferenceRules where
 import Data.Maybe
 import Data.List
 import qualified Data.Map
-       (Map, elems, filter, filterWithKey, fromList, union, keys, insert,
-        member, lookup, empty, findWithDefault, map, unions)
+       (Map, elems, filter, filterWithKey, fromList, toList, union, keys,
+        insert, member, lookup, empty, findWithDefault, map, unions)
 import Control.Arrow
 import Control.Monad (join)
 import Control.Monad.Supply
 import qualified Control.Monad.State
+import qualified Control.Monad.Supply
 import Control.Monad.Identity
 import Data.Implicit
 import Data.Bifunctor (bimap)
@@ -48,7 +49,7 @@ caseRule _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 eval
     :: (Monad m)
     => AbstractState
-    -> Control.Monad.State.StateT Int m (AbstractState, AbstractState)
+    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') m))) (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
     (h_:b_,_) <- instantiateWithFreshVariables (h : maybeToList b)
     ([t_],freshVarSub) <- instantiateWithFreshVariables [t]
@@ -64,6 +65,15 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
         (Just mgu) = unify t_ h_
         mguG = restrictSubstToG mgu g_
         mguGAndRenaming = restrictSubstToGForU mgu g_
+    Control.Monad.State.lift
+        (Control.Monad.State.lift
+             (Control.Monad.State.lift
+                  (Control.Monad.State.modify
+                       (Data.Map.map
+                            (\p ->
+                                  fromMap
+                                      (toMap p `Data.Map.union`
+                                       toMap (applyToSubKeys mgu p)))))))
     let s1 =
             ( ( map
                     (apply mgu)
@@ -318,7 +328,7 @@ arityOfRootSymbol (Fun _ xs) = length xs
 -- split rule for states with a single goal
 split
     :: AbstractState
-    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) (AbstractState, AbstractState)
+    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') IO))) (AbstractState, AbstractState)
 split ([(t:qs,sub,Nothing)],(g,u)) = do
     let vs =
             map
@@ -345,7 +355,7 @@ split ([(t:qs,sub,Nothing)],(g,u)) = do
 nextG
     :: Term'
     -> G
-    -> (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO) G
+    -> (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') IO)) G
 nextG t g = do
     let gPos =
             filter
@@ -378,7 +388,7 @@ groundnessAnalysis
     :: String
     -> Int
     -> [Int]
-    -> Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO [Int]
+    -> Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') IO) [Int]
 groundnessAnalysis f arity groundInputs = do
     cachedResults <- Control.Monad.State.get
     if (f, arity, groundInputs) `Data.Map.member` cachedResults
@@ -387,7 +397,7 @@ groundnessAnalysis f arity groundInputs = do
                       (Data.Map.lookup (f, arity, groundInputs) cachedResults))
         else do
             groundOutputs <-
-                Control.Monad.State.lift
+                Control.Monad.State.liftIO
                     (do putStrLn "groundness analysis required:"
                         putStrLn
                             ("function symbol: '" ++

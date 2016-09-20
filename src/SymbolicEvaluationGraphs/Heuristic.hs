@@ -6,9 +6,12 @@ import Data.Implicit
 import Data.Foldable (toList)
 import Data.Maybe
 import Data.List (find, nubBy, nub, (\\), maximumBy)
-import Data.Map (Map, fromList, insertWith, union, elemAt, keysSet)
-import qualified Data.Map (insert, toList, empty, map, lookup)
+import Data.Map
+       (Map, fromList, insertWith, union, elemAt, keysSet, adjust)
+import qualified Data.Map
+       (insert, toList, empty, map, lookup, singleton)
 import Control.Arrow ((***), second)
+import Control.Monad (when)
 import Control.Monad.State
 import Control.Monad.Extra (mapMaybeM)
 import Control.Monad.Morph
@@ -23,7 +26,7 @@ import Data.Rewriting.Pos
 import Data.Rewriting.Term (vars, subtermAt, replaceAt)
 import Data.Rewriting.Term.Type (Term(..))
 import Data.Rewriting.Substitution (unify, apply)
-import Data.Rewriting.Substitution.Type (fromMap)
+import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
@@ -52,7 +55,7 @@ graphSizeLimit = 400
 
 generateSymbolicEvaluationGraph
     :: QueryClass
-    -> Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO (BTree (AbstractState, (String, Int)))
+    -> StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) (BTree (AbstractState, (String, Int)))
 generateSymbolicEvaluationGraph queryClass = do
     tp <-
         evalSupplyT
@@ -88,7 +91,7 @@ followThePath t = foldr ($) (fromTree t)
 
 getInitialAbstractState
     :: (Monad m)
-    => QueryClass -> Control.Monad.State.StateT Int m AbstractState
+    => QueryClass -> (StateT Int m) AbstractState
 getInitialAbstractState (f,m) = do
     (vs,gs) <-
         foldr
@@ -105,7 +108,7 @@ getInitialAbstractState (f,m) = do
 applyRule
     :: IO (TreePos Full (AbstractState, (String, Int)))
     -> Int
-    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) IO)) (TreePos Full (AbstractState, (String, Int)))
+    -> StateT Int (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (TreePos Full (AbstractState, (String, Int)))
 applyRule ioTp n = do
     tp <- Control.Monad.State.liftIO ioTp
     progress <- peek
@@ -114,7 +117,7 @@ applyRule ioTp n = do
         else do
             let s = fst (label tp)
             let ss =
-                    eval s :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) (AbstractState, AbstractState)
+                    eval s :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (AbstractState, AbstractState)
                 s0 = do
                     e <- ss
                     return (fst e)
@@ -137,7 +140,7 @@ applyRule ioTp n = do
                             let j = snd (snd (label tp))
                             j <-
                                 if j == -1
-                                    then peek :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                                    then peek :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                                     else return j
                             let newTp =
                                     modifyLabel
@@ -145,11 +148,9 @@ applyRule ioTp n = do
                                               (x, ("instance", j)))
                                         tp
                             instanceCandidates <-
-                                hoist
-                                    generalize
-                                    (getInstanceCandidates
-                                         (label tp)
-                                         (roseTreeToBTree (toTree newTp)))
+                                getInstanceCandidates
+                                    (label tp)
+                                    (roseTreeToBTree (toTree newTp))
                             let inst =
                                     tryToApplyInstanceRule s instanceCandidates
                             if isJust inst
@@ -157,7 +158,7 @@ applyRule ioTp n = do
                                     let j = snd (snd (label tp))
                                     j <-
                                         if j == -1
-                                            then supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                                             else return j
                                     let newTp =
                                             modifyLabel
@@ -201,9 +202,9 @@ applyRule ioTp n = do
                     s0' <- s0
                     s1' <- s1
                     j1 <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     j2 <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     return
                         (insertAndMoveToChild
                              tp
@@ -212,18 +213,18 @@ applyRule ioTp n = do
                     sp0' <- sp0
                     sp1' <- sp1
                     j1 <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     j2 <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     return
                         (insertAndMoveToChild
                              tp
                              (Just (sp0', ("", j1)), Just (sp1', ("", j2))))
                 cs2 = do
                     j1 <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     j2 <-
-                        supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     return
                         (insertAndMoveToChild
                              tp
@@ -232,7 +233,7 @@ applyRule ioTp n = do
                     let j = snd (snd (label tp))
                     j <-
                         if j == -1
-                            then supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return j
                     cs0' <- cs0
                     l <-
@@ -252,7 +253,7 @@ applyRule ioTp n = do
                     let j = snd (snd (label tp))
                     j <-
                         if j == -1
-                            then supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return j
                     cs1' <- cs1
                     l <-
@@ -272,7 +273,7 @@ applyRule ioTp n = do
                     let j = snd (snd (label tp))
                     j <-
                         if j == -1
-                            then supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return j
                     cs2' <- cs2
                     l <-
@@ -292,7 +293,7 @@ applyRule ioTp n = do
                     let j = snd (snd (label tp))
                     j <-
                         if j == -1
-                            then supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return j
                     applyRule
                         (return
@@ -308,9 +309,9 @@ applyRule ioTp n = do
                     let j = snd (snd (label tp))
                     j <-
                         if j == -1
-                            then supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return j
-                    genStep <- applyGeneralizationStep s
+                    genStep <- applyGeneralizationStep s j
                     applyRule
                         (return
                              (fst
@@ -338,7 +339,7 @@ applyRule ioTp n = do
                     let j = snd (snd (label tp))
                     j <-
                         if j == -1
-                            then supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return j
                     applyRule
                         (return
@@ -360,7 +361,7 @@ applyRule ioTp n = do
                             let j = snd (snd (label tp))
                             j <-
                                 if j == -1
-                                    then supply :: Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) IO)) Int
+                                    then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                                     else return j
                             applyRule
                                 (return
@@ -381,19 +382,15 @@ applyRule ioTp n = do
                                                (Left _) -> True
                                                _ -> False
                                             then return False
-                                            else hoist
-                                                     generalize
-                                                     (isFunctionSymbolRecursive
-                                                          (Fun
-                                                               (fromRight
-                                                                    (Data.Rewriting.Term.root
-                                                                         t))
-                                                               [])
-                                                          (arityOfRootSymbol t))
+                                            else isFunctionSymbolRecursive
+                                                     (Fun
+                                                          (fromRight
+                                                               (Data.Rewriting.Term.root
+                                                                    t))
+                                                          [])
+                                                     (arityOfRootSymbol t)
                                     ((_:_,_,Just clause):_,_) ->
-                                        hoist
-                                            generalize
-                                            (isClauseRecursive clause)
+                                        isClauseRecursive clause
                             if n >= minExSteps && b
                                 then if length (fst s) > 1
                                          then par
@@ -454,9 +451,10 @@ insertAndMoveToChild tp (l,r) =
             tp
 
 getInstanceCandidates
-    :: (AbstractState, (String, Int))
+    :: (Monad m)
+    => (AbstractState, (String, Int))
     -> BTree (AbstractState, (String, Int))
-    -> Control.Monad.State.State Int [(AbstractState, (String, Int))]
+    -> StateT Int m [(AbstractState, (String, Int))]
 getInstanceCandidates node graph = do
     isRecursive <-
         if isNothing
@@ -501,7 +499,9 @@ getVarNum (ss,_) =
                    concatMap Data.Rewriting.Term.vars qs)
              ss)
 
-isClauseRecursive :: Clause -> Control.Monad.State.State Int Bool
+isClauseRecursive
+    :: (Monad m)
+    => Clause -> StateT Int m Bool
 isClauseRecursive (_,Nothing) = return False
 isClauseRecursive (_,Just b) =
     (fmap or .
@@ -517,8 +517,8 @@ isClauseRecursive (_,Just b) =
         (getMetaPredications b)
 
 isFunctionSymbolRecursive
-    :: Implicit_ [Clause]
-    => Term' -> Int -> Control.Monad.State.State Int Bool
+    :: (Implicit_ [Clause], Monad m)
+    => Term' -> Int -> StateT Int m Bool
 isFunctionSymbolRecursive (Fun f _) arity =
     if f == "repeat" ||
        f `notElem`
@@ -644,11 +644,8 @@ isFunctionSymbolRecursive (Fun f _) arity =
 isFunctionSymbolRecursive _ _ = error "No function symbol provided."
 
 isFunctionSymbolRecursive_
-    :: Implicit_ [Clause]
-    => String
-    -> [Either String String]
-    -> Clause
-    -> Control.Monad.State.State Int Bool
+    :: (Implicit_ [Clause], Monad m)
+    => String -> [Either String String] -> Clause -> StateT Int m Bool
 isFunctionSymbolRecursive_ f hrs c = do
     his <-
         mapMaybeM
@@ -714,17 +711,19 @@ branchingFactor (Fun f _) =
 branchingFactor _ = error "No function symbol provided."
 
 applyGeneralizationStep
-    :: (Monad m)
-    => AbstractState -> Control.Monad.State.StateT Int m AbstractState
-applyGeneralizationStep s = applyGeneralizationStep_ [] s (fst (snd s))
+    :: AbstractState
+    -> Int
+    -> StateT Int (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) AbstractState
+applyGeneralizationStep s nodePos =
+    applyGeneralizationStep_ [] s nodePos (fst (snd s))
 
 applyGeneralizationStep_
-    :: (Monad m)
-    => [(Term', Term')]
+    :: [(Term', Term')]
     -> AbstractState
+    -> Int
     -> G
-    -> Control.Monad.State.StateT Int m AbstractState
-applyGeneralizationStep_ r s g = do
+    -> StateT Int (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) AbstractState
+applyGeneralizationStep_ r s nodePos g = do
     let ts =
             map
                 (\x ->
@@ -764,6 +763,30 @@ applyGeneralizationStep_ r s g = do
                               fromJust (subtermAt t pos) == fst x)
                         r
             freshVar <- freshVariable
+            when
+                (all
+                     (`elem` fst (snd s))
+                     (map Var (vars (fromJust (subtermAt t pos)))))
+                (lift
+                     (lift
+                          (lift
+                               (modify
+                                    (insertWith
+                                         (curry
+                                              (fromMap .
+                                               Data.Map.insert
+                                                   ((\(Var v) ->
+                                                          v)
+                                                        freshVar)
+                                                   (fromJust (subtermAt t pos)) .
+                                               toMap . snd))
+                                         nodePos
+                                         (fromMap
+                                              (Data.Map.singleton
+                                                   ((\(Var v) ->
+                                                          v)
+                                                        freshVar)
+                                                   (fromJust (subtermAt t pos)))))))))
             let (t',r',g')
                   | isJust fromR =
                       (fromJust (replaceAt t pos (snd (fromJust fromR))), r, g)
@@ -795,7 +818,7 @@ applyGeneralizationStep_ r s g = do
                       (\(ss,(g,u)) ->
                             (ss, (g, (element k .~ (fst (u !! k), t')) u)))
                           s
-            applyGeneralizationStep_ r' s' g'
+            applyGeneralizationStep_ r' s' nodePos g'
         else return (fst s, (g, snd (snd s)))
 
 findFiniteGeneralizationPosition :: Term' -> Maybe Pos

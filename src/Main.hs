@@ -108,10 +108,13 @@ import           Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
       P.putDoc (P.vcat (Data.List.map (prettyRule (P.text "->") P.text P.text) rewriteRules))-}
 
 main = do
+      --let mguG = Subst.fromMap (fromList [("T29",Fun "f" [Var "T40", Var "T50"])])
+      --let p = Subst.fromMap (fromList [("T29", Fun "f" [Fun "s" [Fun "s" [Fun "s" [Fun "0" []]]], Fun "0" []])])
+      --error (show (Subst.toMap p `Data.Map.union` Subst.toMap (applyToSubKeys mguG p)))
       args <- getArgs
       (exprs,_) <- parseProlog2 (head args)
       putStrLn ""
-      (graph, groundnessAnalysisInformation) <- runStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) Data.Map.empty
+      ((graph, groundnessAnalysisInformation), generalizationInformation) <- runStateT (runStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) Data.Map.empty) Data.Map.empty
       if not (Data.List.null (fix (\f n ->
             case n of
                 BNode (_,(s,_)) l r ->
@@ -130,13 +133,13 @@ main = do
           putStrLn "Please note that this will fail if the symbolic evaluation graph is not decomposable."
           putStrLn ""
           putStrLn ""
-          rewriteRules <- evalStateT (generateRewriteRulesForGraphsWithMultSplitNodes graph mulSplitNodes) groundnessAnalysisInformation
+          rewriteRules <- evalStateT (evalStateT (generateRewriteRulesForGraphsWithMultSplitNodes graph mulSplitNodes) groundnessAnalysisInformation) generalizationInformation
           concatSaveFileInTPDBFormat (head (tail (tail args))) rewriteRules
         else do
-          rewriteRules <- evalStateT (generateRewriteRules graph) groundnessAnalysisInformation
+          rewriteRules <- evalStateT (evalStateT (generateRewriteRules graph) groundnessAnalysisInformation) generalizationInformation
           saveFileInTPDBFormat (head (tail (tail args))) rewriteRules
       else do
-        rewriteRules <- evalStateT (generateRewriteRules graph) groundnessAnalysisInformation
+        rewriteRules <- evalStateT (evalStateT (generateRewriteRules graph) groundnessAnalysisInformation) generalizationInformation
         saveFileInTPDBFormat (head (tail (tail args))) rewriteRules
 
 
