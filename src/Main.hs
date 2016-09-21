@@ -114,7 +114,19 @@ main = do
       args <- getArgs
       (exprs,_) <- parseProlog2 (head args)
       putStrLn ""
-      ((graph, groundnessAnalysisInformation), generalizationInformation) <- runStateT (runStateT (generateSymbolicEvaluationGraph (head (getQueryClasses exprs))) Data.Map.empty) Data.Map.empty
+      let queryClasses = getQueryClasses exprs
+      queryClass <- if length queryClasses > 1 then do
+            putStrLn "Multiple query classes detetected:"
+            putStrLn ""
+            mapM_ putStrLn (zipWith (\i c -> show i ++ ": " ++ show c) [0..] queryClasses)
+            putStrLn ""
+            putStrLn "Please indicate which one to analyze."
+            i <- readLn
+            putStrLn ""
+            return (queryClasses !! i)
+          else
+            return (head queryClasses)
+      ((graph, groundnessAnalysisInformation), generalizationInformation) <- runStateT (runStateT (generateSymbolicEvaluationGraph queryClass) Data.Map.empty) Data.Map.empty
       if not (Data.List.null (fix (\f n ->
             case n of
                 BNode (_,(s,_)) l r ->
@@ -195,11 +207,4 @@ getNode graph i = head (fix (\f n ->
 {-main = let s = ([([Fun "k" [Fun "s" [Fun "k" [Fun "s" [Fun "s" [Fun "0" []]]]], Fun "f" [], Var "x"]], Subst.fromMap (fromList []), Nothing)], ([],[])) in
        print =<< evalStateT (applyGeneralizationStep s) 0-}
 
---main = printArrayLineByLine (getMetaPredicates (Fun "," [Var "p", Fun ";" [Fun "f" [Fun "," [Var "r", Var "r"]], Var "q"]]))
-
-printArrayLineByLine :: Show a => [a] -> IO ()
-printArrayLineByLine [] = putStrLn ""
-printArrayLineByLine (x:xs) = do
-  print x
-  putStrLn ""
-  printArrayLineByLine xs
+--main = mapM_ print (getMetaPredicates (Fun "," [Var "p", Fun ";" [Fun "f" [Fun "," [Var "r", Var "r"]], Var "q"]]))
