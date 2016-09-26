@@ -69,7 +69,7 @@ nextGOnQuery
     -> StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) G
 nextGOnQuery [] g = return g
 nextGOnQuery (x:xs) g =
-    let nG = nextG x g
+    let nG = liftM2 union (return g) (nextG x g)
     in liftM2 union nG (nextGOnQuery xs =<< nG)
 
 connectionPathStartNodes
