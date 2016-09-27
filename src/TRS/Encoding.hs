@@ -29,7 +29,10 @@ generateRewriteRules_
     -> [BTree (AbstractState, (String, Int))]
     -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) [Rule']
 generateRewriteRules_ graph iCs =
-    liftM2 (++) (encodeConnectionPaths graph iCs) (encodeSplitRules graph)
+    liftM2
+        (++)
+        (liftM2 (++) (encodeConnectionPaths graph iCs) (encodeSplitRules graph))
+        (encodeParallelRules graph)
 
 generateRewriteRulesForGraphsWithMultSplitNodes
     :: BTree (AbstractState, (String, Int))
@@ -46,21 +49,37 @@ encodeIn (BNode (_,("instance",_)) l@(BNode (([(_,mu,_)],(_,_)),("instanceChild"
     apply mu (encodeIn l)
 encodeIn (BNode (_,("noChildInstance",_)) l@(BNode (([(_,mu,_)],(_,_)),("noChildInstanceChild",_)) Empty Empty) _) =
     apply mu (encodeIn l)
-encodeIn (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) =
-    Fun ("fin_s" ++ show i) (nub (concatMap (map Var . vars) ts) `intersect` g)
-encodeIn _ = error "Cannot encode abstract state: multiple goals."
+encodeIn (BNode ((ss,(g,_)),(_,i)) _ _) =
+    Fun
+        ("fin_s" ++ show i)
+        (nub
+             (concatMap
+                  (concatMap (map Var . vars) .
+                   (\(ts,_,_) ->
+                         ts))
+                  ss) `intersect`
+         g)
 
 encodeOut
     :: BTree (AbstractState, (String, Int))
-    -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) Term'
+    -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) [Term']
 encodeOut (BNode (_,("instance",_)) l@(BNode (([(_,mu,_)],_),("instanceChild",_)) Empty Empty) _) =
-    fmap (apply mu) (encodeOut l)
+    fmap (map (apply mu)) (encodeOut l)
 encodeOut (BNode (_,("noChildInstance",_)) l@(BNode (([(_,mu,_)],_),("noChildInstanceChild",_)) Empty Empty) _) =
-    fmap (apply mu) (encodeOut l)
-encodeOut (BNode (([(ts,_,_)],(g,_)),(_,i)) _ _) = do
-    nG <- nextGOnQuery ts g
-    let gOut = nub nG \\ g
-    return (Fun ("fout_s" ++ show i) gOut)
+    fmap (map (apply mu)) (encodeOut l)
+encodeOut (BNode ((ss,(g,_)),(_,i)) _ _) =
+    zipWithM
+        f
+        (map
+             (\(ts,_,_) ->
+                   ts)
+             ss)
+        [0 ..]
+  where
+    f ts n = do
+        nG <- nextGOnQuery ts g
+        let gOut = nub nG \\ g
+        return (Fun ("fout_s" ++ show i ++ "_" ++ show n) gOut)
 encodeOut _ = error "Cannot encode abstract state: multiple goals."
 
 nextGOnQuery
@@ -87,7 +106,8 @@ connectionPathStartNodes graph iCs =
                        Empty -> False)
              ([ graph
               | (\(BNode x _ _) ->
-                      fst (snd x) /= "instance" && fst (snd x) /= "split")
+                      fst (snd x) /= "instance" &&
+                      fst (snd x) /= "split" && fst (snd x) /= "parallel")
                    graph ] ++
               fix
                   (\f n visited ->
@@ -109,20 +129,22 @@ connectionPathStartNodes graph iCs =
                                                ((\(BNode x _ _) ->
                                                       x)
                                                     instanceChild)) `notElem`
-                                           ["instance", "split"] ] ++
+                                           ["instance", "split", "parallel"] ] ++
                                      if snd (snd x) /= -1 &&
                                         snd (snd x) `elem` visited
                                          then []
                                          else f
                                                   instanceChild
                                                   (snd (snd x) : visited)
-                              | fst (snd x) == "split" ->
+                              | fst (snd x) == "split" ||
+                                    fst (snd x) == "parallel" ->
                                   [ l
                                   | (\(BNode x _ _) ->
                                           fst (snd x))
                                        l `notElem`
                                         [ "instance"
                                         , "split"
+                                        , "parallel"
                                         , "noChild"
                                         , "noChildInstance"] ] ++
                                   [ r
@@ -131,6 +153,7 @@ connectionPathStartNodes graph iCs =
                                        r `notElem`
                                         [ "instance"
                                         , "split"
+                                        , "parallel"
                                         , "noChild"
                                         , "noChildInstance"] ] ++
                                   if snd (snd x) /= -1 &&
@@ -178,7 +201,7 @@ connectionPathEndNodes_ n@(BNode x l r) iCs
   | any
        (\y ->
              fst (snd x) == y)
-       ["instance", "split"] ||
+       ["instance", "split", "parallel"] ||
         any
             (\(BNode y _ _) ->
                   snd (snd x) == snd (snd y) && fst (snd y) /= "instanceChild")
@@ -267,33 +290,42 @@ encodeConnectionPath (s,e) = do
         then do
             eO <- encodeOut s
             return
-                [ Rule
-                      (applyGI (apply sub (encodeIn s)))
-                      (applyGI (apply sub eO))]
+                (map
+                     (Rule (applyGI (apply sub (encodeIn s))) .
+                      applyGI . apply sub)
+                     eO)
         else do
             eOs1 <- encodeOut s
             eOsk <- encodeOut e
             return
-                [ Rule
-                      (applyGI (apply sub (encodeIn s)))
-                      (applyGI
-                           (Fun
-                                (getUFunctionSymbol s e)
-                                (encodeIn e :
-                                 nub
-                                     ((\(Fun _ ts) ->
-                                            ts)
-                                          (apply sub (encodeIn s))))))
-                , Rule
-                      (applyGI
-                           (Fun
-                                (getUFunctionSymbol s e)
-                                (eOsk :
-                                 nub
-                                     ((\(Fun _ ts) ->
-                                            ts)
-                                          (apply sub (encodeIn s))))))
-                      (applyGI (apply sub eOs1))]
+                (Rule
+                     (applyGI (apply sub (encodeIn s)))
+                     (applyGI
+                          (Fun
+                               (getUFunctionSymbol s e)
+                               (encodeIn e :
+                                nub
+                                    ((\(Fun _ ts) ->
+                                           ts)
+                                         (apply sub (encodeIn s)))))) :
+                 concatMap
+                     (\x ->
+                           map
+                               (\y ->
+                                     Rule
+                                         (applyGI
+                                              (Fun
+                                                   (getUFunctionSymbol s e)
+                                                   (y :
+                                                    nub
+                                                        ((\(Fun _ ts) ->
+                                                               ts)
+                                                             (apply
+                                                                  sub
+                                                                  (encodeIn s))))))
+                                         (applyGI (apply sub x)))
+                               eOsk)
+                     eOs1)
 
 encodeSplitRules
     :: BTree (AbstractState, (String, Int))
@@ -321,47 +353,127 @@ encodeSplitRule s@(BNode _ s1 s2@(BNode (((_,delta,_):_,_),(_,_)) _ _)) = do
     eOs1 <- encodeOut s1
     eOs2 <- encodeOut s2
     return
-        [ Rule
-              (encodeIn s)
-              (Fun
-                   (getUFunctionSymbol s s1)
-                   (encodeIn s1 :
-                    nub
-                        ((\(Fun _ ts) ->
-                               ts)
-                             (encodeIn s))))
-        , Rule
-              (Fun
-                   (getUFunctionSymbol s s1)
-                   (apply delta eOs1 :
-                    nub
-                        ((\(Fun _ ts) ->
-                               ts)
-                             (encodeIn s))))
-              (Fun
-                   (getUFunctionSymbol s1 s2)
-                   (encodeIn s2 :
-                    nub
-                        ((\(Fun _ ts) ->
-                               ts)
-                             (encodeIn s)) `union`
-                    nub
-                        ((\(Fun _ ts) ->
-                               ts)
-                             (apply delta eOs1))))
-        , Rule
-              (Fun
-                   (getUFunctionSymbol s1 s2)
-                   (eOs2 :
-                    nub
-                        ((\(Fun _ ts) ->
-                               ts)
-                             (encodeIn s)) `union`
-                    nub
-                        ((\(Fun _ ts) ->
-                               ts)
-                             (apply delta eOs1))))
-              (apply delta eOs)]
+        (Rule
+             (encodeIn s)
+             (Fun
+                  (getUFunctionSymbol s s1)
+                  (encodeIn s1 :
+                   nub
+                       ((\(Fun _ ts) ->
+                              ts)
+                            (encodeIn s)))) :
+         map
+             (\x ->
+                   Rule
+                       (Fun
+                            (getUFunctionSymbol s s1)
+                            (apply delta x :
+                             nub
+                                 ((\(Fun _ ts) ->
+                                        ts)
+                                      (encodeIn s))))
+                       (Fun
+                            (getUFunctionSymbol s1 s2)
+                            (encodeIn s2 :
+                             nub
+                                 ((\(Fun _ ts) ->
+                                        ts)
+                                      (encodeIn s)) `union`
+                             nub
+                                 ((\(Fun _ ts) ->
+                                        ts)
+                                      (apply delta x)))))
+             eOs1 ++
+         concatMap
+             (\x ->
+                   concatMap
+                       (\y ->
+                             map
+                                 (\z ->
+                                       Rule
+                                           (Fun
+                                                (getUFunctionSymbol s1 s2)
+                                                (z :
+                                                 nub
+                                                     ((\(Fun _ ts) ->
+                                                            ts)
+                                                          (encodeIn s)) `union`
+                                                 nub
+                                                     ((\(Fun _ ts) ->
+                                                            ts)
+                                                          (apply delta y))))
+                                           (apply delta x))
+                                 eOs2)
+                       eOs1)
+             eOs)
+
+encodeParallelRules
+    :: BTree (AbstractState, (String, Int))
+    -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) [Rule']
+encodeParallelRules graph =
+    fmap
+        concat
+        (mapM
+             encodeParallelRule
+             (fix
+                  (\f n ->
+                        case n of
+                            (BNode (_,(s,_)) l r) ->
+                                [ n
+                                | s == "parallel" ] ++
+                                f l ++ f r
+                            Empty -> [])
+                  graph))
+
+encodeParallelRule
+    :: BTree (AbstractState, (String, Int))
+    -> Control.Monad.State.StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) [Rule']
+encodeParallelRule s@(BNode _ s1 s2) = do
+    eOs <- encodeOut s
+    [eOs1] <- encodeOut s1
+    eOs2 <- encodeOut s2
+    return
+        (Rule
+             (encodeIn s)
+             (Fun
+                  (getUFunctionSymbol s s1 ++ "_" ++ getUFunctionSymbol s s2)
+                  (encodeIn s1 :
+                   encodeIn s2 :
+                   nub
+                       ((\(Fun _ ts) ->
+                              ts)
+                            (encodeIn s)))) :
+         Rule
+             (Fun
+                  (getUFunctionSymbol s s1 ++ "_" ++ getUFunctionSymbol s s2)
+                  (eOs1 :
+                   nub
+                       (concatMap
+                            (\(Fun _ ts) ->
+                                  ts)
+                            eOs2 ++
+                        (\(Fun _ ts) ->
+                              ts)
+                            (encodeIn s))))
+             (head eOs) :
+         zipWith
+             (\x y ->
+                   Rule
+                       (Fun
+                            (getUFunctionSymbol s s1 ++
+                             "_" ++ getUFunctionSymbol s s2)
+                            (nub
+                                 ((\(Fun _ ts) ->
+                                        ts)
+                                      eOs1) ++
+                             [x] ++
+                             nub
+                                 ((\(Fun _ ts) ->
+                                        ts)
+                                      (encodeIn s))))
+                       y)
+             eOs2
+             (tail eOs))
 
 getUFunctionSymbol
     :: BTree (AbstractState, (String, Int))
