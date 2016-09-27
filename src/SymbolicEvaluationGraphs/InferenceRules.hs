@@ -277,48 +277,13 @@ removeUnnecessaryEntriesFromG (ss,(g,u)) = (ss, (filter (`elem` vs) g, u))
 isBacktrackingApplicable
     :: AbstractState -> Bool
 isBacktrackingApplicable ((t:_,_,Just (h,_)):_,(g,u)) =
-    isNothing c || isNothing (unify (apply (fromJust c) t) h)
+    isNothing c ||
+    any
+        (\(t1,t2) ->
+              isJust (unify (apply (fromJust c) t1) (apply (fromJust c) t2)))
+        u
   where
-    c' =
-        fromMap
-            (Data.Map.fromList
-                 (map
-                      (\(t@(Var v),p) ->
-                            let s =
-                                    fromJust
-                                        (Data.Rewriting.Term.subtermAt h p)
-                            in if notElem t g || Data.Rewriting.Term.isGround s
-                                   then (v, s)
-                                   else ( v
-                                        , fromMap
-                                              (Data.Map.fromList
-                                                   (map
-                                                        (\x ->
-                                                              (x, Fun "" []))
-                                                        (Data.Rewriting.Term.vars
-                                                             s))) `apply`
-                                          s))
-                      (filter
-                           (\x ->
-                                 case x of
-                                     (Var _,_) -> True
-                                     _ -> False)
-                           (map
-                                (\p ->
-                                      ( fromJust
-                                            (Data.Rewriting.Term.subtermAt
-                                                 t
-                                                 [p])
-                                      , [p]))
-                                [0 .. arityOfRootSymbol t - 1]))))
-    c   -- check for compatibility with U
-     =
-        if any
-               (\(t1,t2) ->
-                     isJust (unify (apply c' t1) (apply c' t2)))
-               u
-            then Nothing
-            else Just c'
+    c = unify t h
 
 --note that abstract variables are (by definition of the eval rule) necessarily always positioned *directly* below the root (i.e. they appear as arguments of the root function)
 arityOfRootSymbol
