@@ -447,12 +447,9 @@ encodeParallelRule s@(BNode _ s1 s2) = do
              (Fun
                   (getUFunctionSymbol s s1 ++ "_" ++ getUFunctionSymbol s s2)
                   (eOs1 :
+                   Var "P" :
                    nub
-                       (concatMap
-                            (\(Fun _ ts) ->
-                                  ts)
-                            eOs2 ++
-                        (\(Fun _ ts) ->
+                       ((\(Fun _ ts) ->
                               ts)
                             (encodeIn s))))
              (head eOs) :
@@ -462,11 +459,8 @@ encodeParallelRule s@(BNode _ s1 s2) = do
                        (Fun
                             (getUFunctionSymbol s s1 ++
                              "_" ++ getUFunctionSymbol s s2)
-                            (nub
-                                 ((\(Fun _ ts) ->
-                                        ts)
-                                      eOs1) ++
-                             [x] ++
+                            (Var "P" :
+                             x :
                              nub
                                  ((\(Fun _ ts) ->
                                         ts)
