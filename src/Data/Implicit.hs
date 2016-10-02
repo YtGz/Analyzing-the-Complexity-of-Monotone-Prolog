@@ -184,7 +184,7 @@ instance Implicit_ [Clause] where
 
 readPrologFile :: IO [Clause]
 readPrologFile = do
-  (exprs,_) <- parseProlog2 . head =<< getArgs
+  (exprs,_) <- parseProlog2 "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\tests\\evenodd.pl" --TODO: use MonadTransformer instead of implicit parameter
   let queries = map (termToClause . exprToTerm) (filter (not . isQuery) exprs) in
     if hasNoAbstractVariables queries
       then return queries
