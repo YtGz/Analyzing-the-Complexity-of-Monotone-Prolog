@@ -2,6 +2,7 @@
 module Main where
 
 import           System.Environment
+import           System.Exit
 import           Language.Prolog.Parser
 import           Query.Utilities
 import           Data.Rewriting.Substitution (Subst, GSubst, unify, apply, compose)
@@ -115,6 +116,10 @@ main = do
       (exprs,_) <- parseProlog2 (head args)
       putStrLn ""
       let queryClasses = getQueryClasses exprs
+      when (Data.List.null queryClasses) (
+        putStrLn "Input program contains no queries." >>
+        putStrLn "No analysis required." >>
+        exitSuccess)
       queryClass <- if length queryClasses > 1 then do
             putStrLn "Multiple query classes detetected:"
             putStrLn ""
