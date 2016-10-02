@@ -262,7 +262,7 @@ subDif t s =
 unifiersAppliedOnPath
     :: (BTree (AbstractState, (String, Int)), BTree (AbstractState, (String, Int)))
     -> Subst'
-unifiersAppliedOnPath (BNode (([(_,t,_)],_),_) _ _,BNode (((_,s,_):_,_),_) _ _) =
+unifiersAppliedOnPath (BNode (((_,t,_):_,_),_) _ _,BNode (((_,s,_):_,_),_) _ _) =
     subDif t s
 
 encodeConnectionPaths
