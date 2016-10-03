@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module SymbolicEvaluationGraphs.InferenceRules where
@@ -5,18 +6,15 @@ module SymbolicEvaluationGraphs.InferenceRules where
 import Data.Maybe
 import Data.List
 import qualified Data.Map
-       (Map, elems, filter, filterWithKey, fromList, toList, union, keys,
+       (Map, elems, filter, filterWithKey, fromList, union, keys,
         insert, member, lookup, empty, findWithDefault, map, unions)
 import Control.Arrow
-import Control.Monad (join)
 import Control.Monad.Supply
 import qualified Control.Monad.State
-import qualified Control.Monad.Supply
 import Control.Monad.Identity
 import Data.Implicit
 import Data.Bifunctor (bimap)
 import Data.Function (on)
-import System.IO.Unsafe (unsafePerformIO)
 import Data.Rewriting.Substitution (apply, compose, unify)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import qualified Data.Rewriting.Term
@@ -24,7 +22,6 @@ import Data.Rewriting.Term.Type (Term(..))
 import ExprToTerm.Conversion
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities
-import Diagrams.TwoD.Layout.Tree
 
 suc :: AbstractState -> AbstractState
 suc (state@(([],_,Nothing):_),kb) = implicitGeneralization (tail state, kb)
@@ -77,7 +74,7 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
     let s1 =
             ( ( map
                     (apply mgu)
-                    (maybe [] splitClauseBody (listToMaybe b_) ++ qs)
+                    (maybe [] splitClauseBody (listToMaybe b_) ++ qs_)
               , compose mgu sub_
               , Nothing) :
               map
@@ -131,6 +128,7 @@ flattenLists ((ts,s,c):ss,(g,u)) = do
                                                   _ -> True)
                                         sub))
                 u))
+flattenLists s@([], _) = return s
 
 flattenListsInTerm
     :: (Monad m)
@@ -142,7 +140,7 @@ flattenListsInTerm (Fun ":" subterms) m =
     Control.Monad.State.liftM
         Data.Map.unions
         (mapM (`flattenListsInTerm_` m) subterms)
-flattenListsInTerm (Fun f subterms) m =
+flattenListsInTerm (Fun _ subterms) m =
     Control.Monad.State.liftM
         Data.Map.unions
         (mapM (`flattenListsInTerm` m) subterms)
@@ -156,7 +154,7 @@ flattenListsInTerm_
 flattenListsInTerm_ l@(Fun ":" _) m = do
     v <- freshVariable
     return (Data.Map.insert l v m)
-flattenListsInTerm_ (Fun f subterms) m =
+flattenListsInTerm_ (Fun _ subterms) m =
     Control.Monad.State.liftM
         Data.Map.unions
         (mapM (`flattenListsInTerm_` m) subterms)
@@ -194,8 +192,11 @@ applyFlatteningToG g sub ((ts,_,_):ss) =
                    all (`elem` g) (map Var (Data.Rewriting.Term.vars k)))
              sub)
 
+applyFlatteningToG _ _ [] = error "Malformed abstract state"
+
 backtrack :: AbstractState -> AbstractState
 backtrack (state@((_,_,Just _):_),kb) = implicitGeneralization (tail state, kb)
+backtrack _ = error "Backtracking should not be applicable to this abstract state"
 
 root :: Term' -> String
 root (Var s) = s
@@ -276,7 +277,7 @@ removeUnnecessaryEntriesFromG (ss,(g,u)) = (ss, (filter (`elem` vs) g, u))
 -- we can use the backtrack rule if there is no concretization γ w.r.t. KB such that tγ ~ h
 isBacktrackingApplicable
     :: AbstractState -> Bool
-isBacktrackingApplicable ((t:_,_,Just (h,_)):_,(g,u)) =
+isBacktrackingApplicable ((t:_,_,Just (h,_)):_,(_,u)) =
     isNothing c ||
     any
         (\(t1,t2) ->
@@ -284,17 +285,19 @@ isBacktrackingApplicable ((t:_,_,Just (h,_)):_,(g,u)) =
         u
   where
     c = unify t h
+isBacktrackingApplicable _ = False
 
 --note that abstract variables are (by definition of the eval rule) necessarily always positioned *directly* below the root (i.e. they appear as arguments of the root function)
 arityOfRootSymbol
     :: Term' -> Int
 arityOfRootSymbol (Fun _ xs) = length xs
+arityOfRootSymbol (Var _) = error "Variables have no arity"
 
 -- split rule for states with a single goal
 split
     :: AbstractState
     -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') IO))) (AbstractState, AbstractState)
-split ([(t:qs,sub,Nothing)],(g,u)) = do
+split ([(t:qs,_,Nothing)],(g,u)) = do
     let vs =
             map
                 Var
@@ -316,6 +319,7 @@ split ([(t:qs,sub,Nothing)],(g,u)) = do
         , implicitGeneralization
               ( [(map (apply d) qs, d, Nothing)]
               , (g', map (apply d *** apply d) u)))
+split _ = error "Error in heuristic. Split rule should not be applicable to this abstract state"
 
 nextG
     :: Term'
@@ -387,13 +391,13 @@ tryToApplyInstanceRule
     -> [(AbstractState, (String, Int))]
     -> Maybe (AbstractState, (String, Int))
 tryToApplyInstanceRule _ [] = Nothing
-tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) ((([(qs',_,c')],(g',u')),(r,i)):xs) =
+tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) ((([(qs',_,c')],(g',u')),(_,i)):xs) =
     if c == c' && length qs == length qs'
         then let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
              in if length mu == 1 &&
                    isJust (head mu) &&
-                   (\xs ys ->
-                         null (xs \\ ys) && null (ys \\ xs))
+                   (\ys zs ->
+                         null (ys \\ zs) && null (zs \\ ys))
                        (nub g)
                        (nub
                             (concatMap

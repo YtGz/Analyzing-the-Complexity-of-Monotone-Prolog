@@ -1,19 +1,15 @@
+{-# OPTIONS_GHC -Wall #-}
 module SymbolicEvaluationGraphs.Visualization where
 
 import ExprToTerm.Conversion
 import Data.Rewriting.Term.Type (Term(..))
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities (splitClauseBody)
-import SymbolicEvaluationGraphs.Heuristic (getInstanceCandidates)
-import Data.Rewriting.Substitution (unify, apply)
 import Data.Rewriting.Substitution.Type (toMap, fromMap)
-import Data.Rewriting.Term (vars)
 import Data.Map (toList, fromList)
 import Data.Maybe
-import Data.List (nubBy, nub, (\\))
-import Data.Function (on, fix)
+import Data.Function (fix)
 import Data.String.Utils
-import Control.Monad (when, liftM, liftM2, liftM3)
 import System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
 import Diagrams.Prelude
 import Diagrams.Backend.SVG (B, renderSVG)
@@ -24,34 +20,34 @@ import Control.Concurrent (threadDelay, forkIO, killThread)
 --TODO: draw dashed arrows to instance father for instance rule
 printSymbolicEvaluationGraph
     :: FilePath -> BTree (AbstractState, (String, Int)) -> IO ()
-printSymbolicEvaluationGraph filepath t = do
+printSymbolicEvaluationGraph filepath tree = do
     let diagram =
             (renderTree'
                  fst
-                 (\((n,s),p1) ((_,s'),p2) ->
+                 (\((_,s),pt1) ((_,s'),pt2) ->
                        let rule = write (fst (snd s))
                            additionToU =
-                               if fst (snd s) == "eval" && fst (unp2 p2) >=
-                                  fst (unp2 p1)
+                               if fst (snd s) == "eval" && fst (unp2 pt2) >=
+                                  fst (unp2 pt1)
                                    then write (getAdditionToU (fst s))
                                    else write ""
                            mu =
                                if fst (snd s') == "instanceChild"
                                    then write
                                             (showSubst'
-                                                 ((\(_,mu,_) ->
-                                                        mu)
+                                                 ((\(_,mu',_) ->
+                                                        mu')
                                                       (head (fst (fst s')))))
                                    else write ""
                            annotationToTheRight = additionToU `atop` mu
                        in rule #
                           translate
-                              (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
+                              (((pt1 .-. origin) ^+^ ((pt2 .-. pt1) ^* 0.5)) ^+^
                                (negated (V2 (snd (fromJust (extentX rule))) 0) ^+^
                                 unit_X)) `atop`
                           annotationToTheRight #
                           translate
-                              (((p1 .-. origin) ^+^ ((p2 .-. p1) ^* 0.5)) ^+^
+                              (((pt1 .-. origin) ^+^ ((pt2 .-. pt1) ^* 0.5)) ^+^
                                (negated
                                     (V2
                                          (fst
@@ -60,8 +56,8 @@ printSymbolicEvaluationGraph filepath t = do
                                                         annotationToTheRight)))
                                          0) #
                                 scale 1.2)) `atop`
-                          p1 ~~
-                          p2)
+                          pt1 ~~
+                          pt2)
                  (fromJust
                       (symmLayoutBin'
                            (with & slVSep .~ 4 & slWidth .~ fromMaybe (0, 0) .
@@ -77,8 +73,8 @@ printSymbolicEvaluationGraph filepath t = do
                                               printAbstractState
                                                   ((if fst (snd s) ==
                                                        "instanceChild"
-                                                        then (\(([(t,_,c)],g),r) ->
-                                                                   ( ( [ ( t
+                                                        then (\(([(t',_,c)],g),r) ->
+                                                                   ( ( [ ( t'
                                                                          , fromMap
                                                                                (fromList
                                                                                     [])
@@ -96,7 +92,7 @@ printSymbolicEvaluationGraph filepath t = do
                                                then lc crimson # lwL 0.4
                                                else lwL 0.2
                                          , s))
-                                t))) #
+                                tree))) #
              lwL 0.2 #
              centerXY #
              padX 1.1 #
@@ -110,7 +106,7 @@ printSymbolicEvaluationGraph filepath t = do
             (fix
                  (\f i c ->
                        putChar c >> threadDelay 20000 >>
-                       if i == 19
+                       if i == (19 :: Integer)
                            then putChar '\r' >>
                                 f
                                     0
@@ -131,12 +127,12 @@ printSymbolicEvaluationGraph filepath t = do
 
 getAdditionToU :: AbstractState -> String
 getAdditionToU ((t:_,_,Just (h,_)):_,_) = showTerm' t ++ " !~ " ++ showTerm' h
-getAdditionToU s = error "Malformed abstract state."
+getAdditionToU _ = error "Malformed abstract state."
 
 printAbstractState :: (AbstractState, (String, Int)) -> QDiagram B V2 Double Any
 printAbstractState (([],_),_) = write "e"
-printAbstractState ((gs,(g,u)),(s,i)) =
-    label
+printAbstractState ((gs,(g,_)),(s,i)) =
+    labelNode
         (foldr
              ((|||) . (||| (strutX 1.2 ||| write "|" ||| strutX 1.2)) . f)
              mempty
@@ -144,7 +140,7 @@ printAbstractState ((gs,(g,u)),(s,i)) =
          f (last gs)) #
     centerXY
   where
-    label =
+    labelNode =
         if s == "split"
             then (\x ->
                        x ||| (strutX 1.2 ||| write "||" ||| strutX 1.2) |||

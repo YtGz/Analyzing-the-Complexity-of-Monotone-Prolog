@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall   #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module SymbolicEvaluationGraphs.Heuristic where
@@ -5,16 +6,13 @@ module SymbolicEvaluationGraphs.Heuristic where
 import Data.Implicit
 import Data.Foldable (toList)
 import Data.Maybe
-import Data.List (find, nubBy, nub, (\\), maximumBy)
-import Data.Map
-       (Map, fromList, insertWith, union, elemAt, keysSet, adjust)
+import Data.List (find, maximumBy)
+import Data.Map (Map, fromList, insertWith, union, elemAt)
 import qualified Data.Map
        (insert, toList, empty, map, lookup, singleton)
 import Control.Arrow ((***), second)
-import Control.Monad (when)
 import Control.Monad.State
 import Control.Monad.Extra (mapMaybeM)
-import Control.Monad.Morph
 import Control.Monad.Supply
 import Data.Either.Utils
 import Data.Tree.Zipper
@@ -70,12 +68,16 @@ generateSymbolicEvaluationGraph queryClass = do
 
 type TreePath a = [TreePos Full a -> TreePos Full a]
 
+firstChild' :: TreePos Full a -> TreePos Full a
 firstChild' = fromJust . firstChild
 
+parent' :: TreePos Full a -> TreePos Full a
 parent' = fromJust . parent
 
+prev' :: TreePos Full a -> TreePos Full a
 prev' = fromJust . prev
 
+next' :: TreePos Full a -> TreePos Full a
 next' = fromJust . next
 
 -- Determine the path from the root of the tree to the cursor.
@@ -110,20 +112,20 @@ applyRule
     -> Int
     -> StateT Int (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (TreePos Full (AbstractState, (String, Int)))
 applyRule ioTp n = do
-    tp <- Control.Monad.State.liftIO ioTp
+    treePos <- Control.Monad.State.liftIO ioTp
     progress <- peek
     if progress > graphSizeLimit
-        then return tp
+        then return treePos
         else do
-            let s = fst (label tp)
+            let s = fst (label treePos)
             let ss =
                     eval s :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (AbstractState, AbstractState)
                 s0 = do
-                    e <- ss
-                    return (fst e)
+                    ev <- ss
+                    return (fst ev)
                 s1 = do
-                    e <- ss
-                    return (snd e)
+                    ev <- ss
+                    return (snd ev)
                 sps = split s
                 sp0 = do
                     sps' <- sps
@@ -136,40 +138,39 @@ applyRule ioTp n = do
                 par1 = snd pars
                 i =
                     case s of
-                        ((t:_,_,_):_,_) -> do
-                            let j = snd (snd (label tp))
+                        ((_:_,_,_):_,_) -> do
                             j <-
-                                if j == -1
+                                if snd (snd (label treePos)) == -1
                                     then peek :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
-                                    else return j
+                                    else return (snd (snd (label treePos)))
                             let newTp =
                                     modifyLabel
                                         (\(x,_) ->
                                               (x, ("instance", j)))
-                                        tp
+                                        treePos
                             instanceCandidates <-
                                 getInstanceCandidates
-                                    (label tp)
+                                    (label treePos)
                                     (roseTreeToBTree (toTree newTp))
                             let inst =
                                     tryToApplyInstanceRule s instanceCandidates
                             if isJust inst
                                 then do
-                                    let j = snd (snd (label tp))
-                                    j <-
-                                        if j == -1
+                                    j' <-
+                                        if snd (snd (label treePos)) == -1
                                             then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
-                                            else return j
-                                    let newTp =
+                                            else return
+                                                     (snd (snd (label treePos)))
+                                    let newTp' =
                                             modifyLabel
                                                 (\(x,_) ->
-                                                      (x, ("instance", j)))
-                                                tp
+                                                      (x, ("instance", j')))
+                                                treePos
                                     return
                                         (Just
                                              (fst
                                                   (insertAndMoveToChild
-                                                       newTp
+                                                       newTp'
                                                        (inst, Nothing))))
                                 else return Nothing
                         _ -> return Nothing
@@ -207,7 +208,7 @@ applyRule ioTp n = do
                         supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     return
                         (insertAndMoveToChild
-                             tp
+                             treePos
                              (Just (s0', ("", j1)), Just (s1', ("", j2))))
                 cs1 = do
                     sp0' <- sp0
@@ -218,7 +219,7 @@ applyRule ioTp n = do
                         supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     return
                         (insertAndMoveToChild
-                             tp
+                             treePos
                              (Just (sp0', ("", j1)), Just (sp1', ("", j2))))
                 cs2 = do
                     j1 <-
@@ -227,14 +228,13 @@ applyRule ioTp n = do
                         supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     return
                         (insertAndMoveToChild
-                             tp
+                             treePos
                              (Just (par0, ("", j1)), Just (par1, ("", j2))))
                 e = do
-                    let j = snd (snd (label tp))
                     j <-
-                        if j == -1
+                        if snd (snd (label treePos)) == -1
                             then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
-                            else return j
+                            else return (snd (snd (label treePos)))
                     cs0' <- cs0
                     l <-
                         b0
@@ -242,7 +242,7 @@ applyRule ioTp n = do
                                  (modifyLabel
                                       (\(x,_) ->
                                             (x, ("eval", j)))
-                                      tp))
+                                      treePos))
                             cs0'
                     let tp =
                             insert
@@ -250,11 +250,10 @@ applyRule ioTp n = do
                                 (Data.Tree.Zipper.last (children l))
                     b1 l tp
                 sp = do
-                    let j = snd (snd (label tp))
                     j <-
-                        if j == -1
+                        if snd (snd (label treePos)) == -1
                             then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
-                            else return j
+                            else return (snd (snd (label treePos)))
                     cs1' <- cs1
                     l <-
                         b0
@@ -262,7 +261,7 @@ applyRule ioTp n = do
                                  (modifyLabel
                                       (\(x,_) ->
                                             (x, ("split", j)))
-                                      tp))
+                                      treePos))
                             cs1'
                     let tp =
                             insert
@@ -270,11 +269,10 @@ applyRule ioTp n = do
                                 (Data.Tree.Zipper.last (children l))
                     b1 l tp
                 par = do
-                    let j = snd (snd (label tp))
                     j <-
-                        if j == -1
+                        if snd (snd (label treePos)) == -1
                             then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
-                            else return j
+                            else return (snd (snd (label treePos)))
                     cs2' <- cs2
                     l <-
                         b0
@@ -282,7 +280,7 @@ applyRule ioTp n = do
                                  (modifyLabel
                                       (\(x,_) ->
                                             (x, ("parallel", j)))
-                                      tp))
+                                      treePos))
                             cs2'
                     let tp =
                             insert
@@ -290,11 +288,10 @@ applyRule ioTp n = do
                                 (Data.Tree.Zipper.last (children l))
                     b1 l tp
                 c = do
-                    let j = snd (snd (label tp))
                     j <-
-                        if j == -1
+                        if snd (snd (label treePos)) == -1
                             then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
-                            else return j
+                            else return (snd (snd (label treePos)))
                     applyRule
                         (return
                              (fst
@@ -302,15 +299,14 @@ applyRule ioTp n = do
                                        (modifyLabel
                                             (\(x,_) ->
                                                   (x, ("case", j)))
-                                            tp)
+                                            treePos)
                                        (Just (caseRule s, ("", -1)), Nothing))))
                         (n + 1)
                 gS = do
-                    let j = snd (snd (label tp))
                     j <-
-                        if j == -1
+                        if snd (snd (label treePos)) == -1
                             then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
-                            else return j
+                            else return (snd (snd (label treePos)))
                     genStep <- applyGeneralizationStep s j
                     applyRule
                         (return
@@ -319,7 +315,7 @@ applyRule ioTp n = do
                                        (modifyLabel
                                             (\(x,_) ->
                                                   (x, ("generalization", j)))
-                                            tp)
+                                            treePos)
                                        ( Just
                                              ( implicitGeneralization genStep
                                              , ("", -1))
@@ -333,14 +329,13 @@ applyRule ioTp n = do
                                   (modifyLabel
                                        (\(x,_) ->
                                              (x, ("", -1)))
-                                       tp)
+                                       treePos)
                                   (Nothing, Nothing)))
                 (([],_,_):_,_) -> do
-                    let j = snd (snd (label tp))
                     j <-
-                        if j == -1
+                        if snd (snd (label treePos)) == -1
                             then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
-                            else return j
+                            else return (snd (snd (label treePos)))
                     applyRule
                         (return
                              (fst
@@ -348,7 +343,7 @@ applyRule ioTp n = do
                                        (modifyLabel
                                             (\(x,_) ->
                                                   (x, ("suc", j)))
-                                            tp)
+                                            treePos)
                                        (Just (suc s, ("", -1)), Nothing))))
                         n
                 _ ->
@@ -358,11 +353,10 @@ applyRule ioTp n = do
                                 (head (fst s))) &&
                        isBacktrackingApplicable s
                         then do
-                            let j = snd (snd (label tp))
                             j <-
-                                if j == -1
+                                if snd (snd (label treePos)) == -1
                                     then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
-                                    else return j
+                                    else return (snd (snd (label treePos)))
                             applyRule
                                 (return
                                      (fst
@@ -370,7 +364,7 @@ applyRule ioTp n = do
                                                (modifyLabel
                                                     (\(x,_) ->
                                                           (x, ("backtrack", j)))
-                                                    tp)
+                                                    treePos)
                                                ( Just (backtrack s, ("", -1))
                                                , Nothing))))
                                 n
@@ -391,6 +385,7 @@ applyRule ioTp n = do
                                                      (arityOfRootSymbol t)
                                     ((_:_,_,Just clause):_,_) ->
                                         isClauseRecursive clause
+                                    _ -> error "Error in heuristic"
                             if n >= minExSteps && b
                                 then if length (fst s) > 1
                                          then par
@@ -616,7 +611,11 @@ isFunctionSymbolRecursive (Fun f _) arity =
                 mapMaybeM
                     (\x -> do
                          let startF =
-                                 Fun f (map (Var . show) (take arity [1,2 ..]))
+                                 Fun
+                                     f
+                                     (map
+                                          (Var . show)
+                                          (take arity [1 :: Integer,2 ..]))
                          (x',_) <-
                              instantiateWithFreshVariables
                                  (fst x : maybeToList (snd x))
@@ -732,8 +731,8 @@ applyGeneralizationStep_ r s nodePos g = do
                      (zipWith
                           (\x y ->
                                 map
-                                    (\x ->
-                                          (x, y))
+                                    (\z ->
+                                          (z, y))
                                     x)
                           (map
                                (\(x,_,_) ->
@@ -811,13 +810,15 @@ applyGeneralizationStep_ r s nodePos g = do
                             , kb))
                           s
                   | l == "kb" && j == 0 =
-                      (\(ss,(g,u)) ->
-                            (ss, (g, (element k .~ (t', snd (u !! k))) u)))
+                      (\(ss,(g'',u)) ->
+                            (ss, (g'', (element k .~ (t', snd (u !! k))) u)))
                           s
                   | l == "kb" && j == 1 =
-                      (\(ss,(g,u)) ->
-                            (ss, (g, (element k .~ (fst (u !! k), t')) u)))
+                      (\(ss,(g'',u)) ->
+                            (ss, (g'', (element k .~ (fst (u !! k), t')) u)))
                           s
+                  | otherwise =
+                      error "Error in function applyGeneralizationStep_"
             applyGeneralizationStep_ r' s' nodePos g'
         else return (fst s, (g, snd (snd s)))
 
@@ -843,7 +844,7 @@ findFiniteGeneralizationPosition t =
            then let ePos = fst (elemAt 0 candidate)
                 in Just
                        (fix
-                            (\f s t pos i path ->
+                            (\f s t' pos i path ->
                                   case t of
                                       Fun s' _
                                         | s' == s ->
@@ -853,7 +854,7 @@ findFiniteGeneralizationPosition t =
                                                          s
                                                          (fromJust
                                                               (subtermAt
-                                                                   t
+                                                                   t'
                                                                    [head path]))
                                                          (pos ++ [head path])
                                                          (i + 1)
@@ -862,7 +863,7 @@ findFiniteGeneralizationPosition t =
                                           f
                                               s
                                               (fromJust
-                                                   (subtermAt t [head path]))
+                                                   (subtermAt t' [head path]))
                                               (pos ++ [head path])
                                               i
                                               (tail path))
@@ -911,9 +912,11 @@ bTreeToRoseTree :: BTree a -> Tree a
 bTreeToRoseTree (BNode e Empty Empty) = Node e []
 bTreeToRoseTree (BNode e l Empty) = Node e [bTreeToRoseTree l]
 bTreeToRoseTree (BNode e l r) = Node e [bTreeToRoseTree l, bTreeToRoseTree r]
+bTreeToRoseTree _ = error "Malformed tree node"
 
 roseTreeToBTree :: Tree a -> BTree a
 roseTreeToBTree (Node e []) = BNode e Empty Empty
 roseTreeToBTree (Node e [l]) = BNode e (roseTreeToBTree l) Empty
 roseTreeToBTree (Node e [l,r]) =
     BNode e (roseTreeToBTree l) (roseTreeToBTree r)
+roseTreeToBTree _ = error "Malformed tree node"

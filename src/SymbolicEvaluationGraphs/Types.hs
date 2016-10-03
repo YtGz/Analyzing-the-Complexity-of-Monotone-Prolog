@@ -1,7 +1,7 @@
+{-# OPTIONS_GHC -Wall #-}
 module SymbolicEvaluationGraphs.Types where
 
 import ExprToTerm.Conversion
-import Data.Rewriting.Term.Type (Term(..))
 
 type AbstractState = (State, KnowledgeBase)
 

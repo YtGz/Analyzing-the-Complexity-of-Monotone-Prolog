@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 module Query.Utilities
   ( isQuery,
     ArgumentType (In, Out),
@@ -28,6 +29,7 @@ getQueryClasses exprs = Data.List.nub (map getQueryClass (filter isQuery exprs))
 getQueryClass :: Language.Prolog.Syntax.Expr -> QueryClass
 getQueryClass (Language.Prolog.Syntax.Op _ [Language.Prolog.Syntax.Str functor args]) =
    (functor, map getArgumentType args)
+getQueryClass _ = error "Malformed query"
 
 getArgumentType :: Language.Prolog.Syntax.Expr -> ArgumentType
 getArgumentType (Language.Prolog.Syntax.Str _ []) = In

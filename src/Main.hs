@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types, UndecidableInstances #-}
 module Main where
 
@@ -7,22 +8,13 @@ import           System.IO
 import           System.Console.GetOpt
 import           Language.Prolog.Parser
 import           Query.Utilities
-import           Data.Rewriting.Substitution (Subst, GSubst, unify, apply, compose)
-import qualified Data.Rewriting.Substitution.Type as Subst
-import           Data.Rewriting.Term.Type                (Term (..))
-import           SymbolicEvaluationGraphs.Types
-import           SymbolicEvaluationGraphs.Utilities
-import           SymbolicEvaluationGraphs.InferenceRules
 import           SymbolicEvaluationGraphs.Visualization
 import           SymbolicEvaluationGraphs.Heuristic
 import           TRS.Encoding hiding (getNode)
 import           TRS.TPDB
-import           Data.Maybe
 import           Data.Map
 import qualified Data.List
 import           Control.Monad.State
-import qualified Text.PrettyPrint.ANSI.Leijen as P (text, putDoc, vcat)
-import           Data.Rewriting.Rule.Pretty
 import           Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 
 
@@ -76,9 +68,11 @@ options =
 checkRequiredOpts :: Options -> IO ()
 checkRequiredOpts opts = when (any Data.List.null [optInputPath opts, optTRSOutputPath opts, optGraphOutputPath opts]) (error "Missing arguments. Type --help for help.")
 
+main :: IO ()
 main = do
   args <- getArgs
-  let (actions, nonOptions, errors) = getOpt RequireOrder options args
+  let (actions, _, errors) = getOpt RequireOrder options args
+  unless (Data.List.null errors) (mapM_ (hPutStrLn stderr) errors >> exitFailure)
   opts <- Data.List.foldl (>>=) (return defaultOptions) actions
   checkRequiredOpts opts
   (exprs,_) <- parseProlog2 (optInputPath opts)
@@ -91,7 +85,7 @@ main = do
   queryClass <- if length queryClasses > 1 then do
         putStrLn "Multiple query classes detetected:"
         putStrLn ""
-        mapM_ putStrLn (zipWith (\i c -> show i ++ ": " ++ show c) [0..] queryClasses)
+        mapM_ putStrLn (zipWith (\i c -> show i ++ ": " ++ show c) [0 :: Integer ..] queryClasses)
         putStrLn ""
         putStrLn "Please indicate which one to analyze."
         i <- readLn

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wall  #-}
+
 module TRS.Encoding where
 
 import Control.Monad.State
@@ -10,7 +12,6 @@ import Data.Map
         filterWithKey)
 import qualified Data.Map (filter)
 import Data.Maybe (fromJust, isJust, listToMaybe)
-import Control.Monad.Morph
 import Data.Rewriting.Term (Term(..), vars)
 import Data.Rewriting.Substitution (apply, merge)
 import Data.Rewriting.Substitution.Type (toMap, fromMap)
@@ -59,6 +60,7 @@ encodeIn (BNode ((ss,(g,_)),(_,i)) _ _) =
                          ts))
                   ss) `intersect`
          g)
+encodeIn _ = error "Cannot encode abstract state due to malformed syntax"
 
 encodeOut
     :: BTree (AbstractState, (String, Int))
@@ -71,10 +73,10 @@ encodeOut (BNode ((ss,(g,_)),(_,i)) _ _) =
     zipWithM
         f
         (map
-             (\(ts,_,_) ->
+             (\(ts,_,_) -> 
                    ts)
              ss)
-        [0 ..]
+        [0 :: Integer ..]
   where
     f ts n = do
         nG <- nextGOnQuery ts g
@@ -119,15 +121,15 @@ connectionPathStartNodes graph iCs =
                                               (filter
                                                    (\(BNode (_,(_,i)) _ _) ->
                                                          i ==
-                                                         (\(BNode (_,(_,i)) _ _) ->
-                                                               i)
+                                                         (\(BNode (_,(_,i')) _ _) ->
+                                                               i')
                                                              l)
                                                    iCs)
                                   in [ instanceChild
                                      | fst
                                           (snd
-                                               ((\(BNode x _ _) ->
-                                                      x)
+                                               ((\(BNode x' _ _) ->
+                                                      x')
                                                     instanceChild)) `notElem`
                                            ["instance", "split", "parallel"] ] ++
                                      if snd (snd x) /= -1 &&
@@ -139,8 +141,8 @@ connectionPathStartNodes graph iCs =
                               | fst (snd x) == "split" ||
                                     fst (snd x) == "parallel" ->
                                   [ l
-                                  | (\(BNode x _ _) ->
-                                          fst (snd x))
+                                  | (\(BNode x' _ _) ->
+                                          fst (snd x'))
                                        l `notElem`
                                         [ "instance"
                                         , "split"
@@ -148,8 +150,8 @@ connectionPathStartNodes graph iCs =
                                         , "noChild"
                                         , "noChildInstance"] ] ++
                                   [ r
-                                  | (\(BNode x _ _) ->
-                                          fst (snd x))
+                                  | (\(BNode x' _ _) ->
+                                          fst (snd x'))
                                        r `notElem`
                                         [ "instance"
                                         , "split"
@@ -196,7 +198,7 @@ connectionPathEndNodes_
     :: BTree (AbstractState, (String, Int))
     -> [BTree (AbstractState, (String, Int))]
     -> [BTree (AbstractState, (String, Int))]
-connectionPathEndNodes_ Empty iCs = []
+connectionPathEndNodes_ Empty _ = []
 connectionPathEndNodes_ n@(BNode x l r) iCs
   | any
        (\y ->
@@ -264,6 +266,7 @@ unifiersAppliedOnPath
     -> Subst'
 unifiersAppliedOnPath (BNode (((_,t,_):_,_),_) _ _,BNode (((_,s,_):_,_),_) _ _) =
     subDif t s
+unifiersAppliedOnPath _ = error "Malformed connection path"
 
 encodeConnectionPaths
     :: BTree (AbstractState, (String, Int))
@@ -406,6 +409,7 @@ encodeSplitRule s@(BNode _ s1 s2@(BNode (((_,delta,_):_,_),(_,_)) _ _)) = do
                                  eOs2)
                        eOs1)
              eOs)
+encodeSplitRule _ = error "Cannot encode split node due to malformed syntax"
 
 encodeParallelRules
     :: BTree (AbstractState, (String, Int))
@@ -468,6 +472,8 @@ encodeParallelRule s@(BNode _ s1 s2) = do
                        y)
              eOs2
              (tail eOs))
+encodeParallelRule _ =
+    error "Cannot encode parallel node due to malformed syntax"
 
 getUFunctionSymbol
     :: BTree (AbstractState, (String, Int))
@@ -478,15 +484,15 @@ getUFunctionSymbol x y =
     show
         (snd
              (snd
-                  ((\(BNode x _ _) ->
-                         x)
+                  ((\(BNode x' _ _) ->
+                         x')
                        x))) ++
     "_s" ++
     show
         (snd
              (snd
-                  ((\(BNode x _ _) ->
-                         x)
+                  ((\(BNode x' _ _) ->
+                         x')
                        y)))
 
 assertDecomposability
@@ -569,7 +575,8 @@ endGraphAtMultSplitNodes (BNode x l r) is =
             (as, ("noChildInstance", i))
             (BNode (as', ("noChildInstanceChild", i')) Empty Empty)
             Empty
-    f (BNode (as,(r,i)) _ _) = BNode (as, ("noChild", i)) Empty Empty
+    f (BNode (as,(_,i)) _ _) = BNode (as, ("noChild", i)) Empty Empty
+    f _ = error "Malformed abstract state"
 
 generalizationInformationOnPath
     :: BTree (AbstractState, (String, Int))
@@ -589,6 +596,8 @@ getNodeLabelsOnPath
     -> [Int]
 getNodeLabelsOnPath startNode (BNode (_,(_,endNode)) _ _) =
     snd (getNodeLabelsOnPath_ startNode endNode [])
+getNodeLabelsOnPath _ Empty =
+    error "Malformed connection path: end node can't be empty"
 
 getNodeLabelsOnPath_ :: BTree (AbstractState, (String, Int))
                      -> Int

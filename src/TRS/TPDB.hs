@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 module TRS.TPDB where
 
 import Data.List (nub)

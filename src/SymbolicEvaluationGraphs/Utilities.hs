@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 module SymbolicEvaluationGraphs.Utilities
   (freshVariable
   ,instantiateWithFreshVariables
@@ -9,10 +10,7 @@ module SymbolicEvaluationGraphs.Utilities
   ,applyToSubKeys)
   where
 
-import Data.IORef
-import System.IO.Unsafe (unsafePerformIO)
 import qualified Control.Monad.State
-import Control.Monad.Identity
 import ExprToTerm.Conversion
 import Data.Rewriting.Term.Type (Term(..))
 import SymbolicEvaluationGraphs.Types
@@ -72,6 +70,7 @@ mapFreshVariables s = do
 isAbstractVariable
     :: String -> Bool
 isAbstractVariable (x:xs) = x == 'T' && isJust (readMaybe xs :: Maybe Int)
+isAbstractVariable _ = error "Malformed term"
 
 -- check if no variable in the input program is of the format of our abstract variables
 hasNoAbstractVariables
@@ -109,7 +108,7 @@ applyToSubKeys_ (s:ss) s' =
 
 applyToSubKeys__ :: Term' -> Term' -> Map String Term'
 applyToSubKeys__ (Var x) f = fromList [(x, f)]
-applyToSubKeys__ (Fun f args) e@(Fun f' args') =
+applyToSubKeys__ (Fun f args) (Fun f' args') =
     if f == f' && length args == length args'
         then Data.Map.unions (zipWith applyToSubKeys__ args args')
         else Data.Map.empty
