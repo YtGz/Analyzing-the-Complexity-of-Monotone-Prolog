@@ -8,6 +8,8 @@ import           System.IO
 import           System.Console.GetOpt
 import           Language.Prolog.Parser
 import           Query.Utilities
+import           ExprToTerm.Conversion (exprToTerm)
+import           SymbolicEvaluationGraphs.Utilities (hasNoAbstractVariables, termToClause)
 import           SymbolicEvaluationGraphs.Visualization
 import           SymbolicEvaluationGraphs.Heuristic
 import           TRS.Encoding hiding (getNode)
@@ -76,6 +78,7 @@ main = do
   opts <- Data.List.foldl (>>=) (return defaultOptions) actions
   checkRequiredOpts opts
   (exprs,_) <- parseProlog2 (optInputPath opts)
+  unless (all hasNoAbstractVariables (Data.List.map exprToTerm exprs)) (error "Source program contains variables of the form \"T\" ++ [Int]. Try renaming.")
   putStrLn ""
   let queryClasses = getQueryClasses exprs
   when (Data.List.null queryClasses) (
@@ -93,7 +96,8 @@ main = do
         return (queryClasses !! i)
       else
         return (head queryClasses)
-  ((graph, groundnessAnalysisInformation), generalizationInformation) <- runStateT (runStateT (generateSymbolicEvaluationGraph queryClass) Data.Map.empty) Data.Map.empty
+  let clauses = Data.List.map (termToClause . exprToTerm) (Data.List.filter (not . isQuery) exprs)
+  ((graph, groundnessAnalysisInformation), generalizationInformation) <- runStateT (runStateT (generateSymbolicEvaluationGraph clauses queryClass) Data.Map.empty) Data.Map.empty
   if not (Data.List.null (fix (\f n ->
         case n of
             BNode (_,(s,_)) l r ->

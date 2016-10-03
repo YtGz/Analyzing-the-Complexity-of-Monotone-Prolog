@@ -12,7 +12,6 @@ import Control.Arrow
 import Control.Monad.Supply
 import qualified Control.Monad.State
 import Control.Monad.Identity
-import Data.Implicit
 import Data.Bifunctor (bimap)
 import Data.Function (on)
 import Data.Rewriting.Substitution (apply, compose, unify)
@@ -27,8 +26,8 @@ suc :: AbstractState -> AbstractState
 suc (state@(([],_,Nothing):_),kb) = implicitGeneralization (tail state, kb)
 suc _ = error "Cannot apply 'suc': Malformed AbstractState"
 
-caseRule :: AbstractState -> AbstractState
-caseRule ((t:qs,sub,Nothing):s,kb) =
+caseRule :: [Clause] -> AbstractState -> AbstractState
+caseRule clauses ((t:qs,sub,Nothing):s,kb) =
     implicitGeneralization
         ( (let f clauseArray term substitution =
                    if null clauseArray
@@ -36,12 +35,12 @@ caseRule ((t:qs,sub,Nothing):s,kb) =
                        else (term, substitution, head clauseArray) :
                             f (tail clauseArray) term substitution
            in f)
-              (map Just (slice t))
+              (map Just (slice clauses t))
               (t : qs)
               sub ++
           s
         , kb)
-caseRule _ = error "Cannot apply 'caseRule': Malformed AbstractState"
+caseRule _ _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 
 eval
     :: (Monad m)
@@ -202,14 +201,12 @@ root :: Term' -> String
 root (Var s) = s
 root (Fun s _) = s
 
-slice
-    :: Implicit_ [Clause]
-    => Term' -> [Clause]
-slice t =
+slice :: [Clause] -> Term' -> [Clause]
+slice clauses t =
     filter
         (\x ->
               root (fst x) == root t)
-        param_
+        clauses
 
 restrictSubstToG :: Subst' -> G -> Subst'
 restrictSubstToG sub g =

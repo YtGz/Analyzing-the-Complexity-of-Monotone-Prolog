@@ -3,7 +3,6 @@
 
 module SymbolicEvaluationGraphs.Heuristic where
 
-import Data.Implicit
 import Data.Foldable (toList)
 import Data.Maybe
 import Data.List (find, maximumBy)
@@ -52,14 +51,14 @@ graphSizeLimit :: Int
 graphSizeLimit = 400
 
 generateSymbolicEvaluationGraph
-    :: QueryClass
-    -> StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) (BTree (AbstractState, (String, Int)))
-generateSymbolicEvaluationGraph queryClass = do
+    :: [Clause] -> QueryClass -> StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) (BTree (AbstractState, (String, Int)))
+generateSymbolicEvaluationGraph clauses queryClass = do
     tp <-
         evalSupplyT
             (evalStateT
                  (do initialState <- getInitialAbstractState queryClass
                      applyRule
+                         clauses
                          (return (fromTree (Node (initialState, ("", -1)) [])))
                          0)
                  0)
@@ -108,10 +107,10 @@ getInitialAbstractState (f,m) = do
     return ([([Fun f vs], fromMap (fromList []), Nothing)], (gs, []))
 
 applyRule
-    :: IO (TreePos Full (AbstractState, (String, Int)))
+    :: [Clause] -> IO (TreePos Full (AbstractState, (String, Int)))
     -> Int
     -> StateT Int (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (TreePos Full (AbstractState, (String, Int)))
-applyRule ioTp n = do
+applyRule clauses ioTp n = do
     treePos <- Control.Monad.State.liftIO ioTp
     progress <- peek
     if progress > graphSizeLimit
@@ -150,6 +149,7 @@ applyRule ioTp n = do
                                         treePos
                             instanceCandidates <-
                                 getInstanceCandidates
+                                    clauses
                                     (label treePos)
                                     (roseTreeToBTree (toTree newTp))
                             let inst =
@@ -176,7 +176,7 @@ applyRule ioTp n = do
                         _ -> return Nothing
                 b0 x' y = do
                     x <- x'
-                    nT <- applyRule (return (fst y)) n
+                    nT <- applyRule clauses (return (fst y)) n
                     return
                         (fromJust
                              (parent
@@ -188,7 +188,7 @@ applyRule ioTp n = do
                                                       (pathToMe x))))
                                        (first (children x)))))
                 b1 x y = do
-                    nT <- applyRule (return y) n
+                    nT <- applyRule clauses (return y) n
                     return
                         (fromJust
                              (parent
@@ -293,6 +293,7 @@ applyRule ioTp n = do
                             then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return (snd (snd (label treePos)))
                     applyRule
+                        clauses
                         (return
                              (fst
                                   (insertAndMoveToChild
@@ -300,7 +301,7 @@ applyRule ioTp n = do
                                             (\(x,_) ->
                                                   (x, ("case", j)))
                                             treePos)
-                                       (Just (caseRule s, ("", -1)), Nothing))))
+                                       (Just (caseRule clauses s, ("", -1)), Nothing))))
                         (n + 1)
                 gS = do
                     j <-
@@ -309,6 +310,7 @@ applyRule ioTp n = do
                             else return (snd (snd (label treePos)))
                     genStep <- applyGeneralizationStep s j
                     applyRule
+                        clauses
                         (return
                              (fst
                                   (insertAndMoveToChild
@@ -337,6 +339,7 @@ applyRule ioTp n = do
                             then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return (snd (snd (label treePos)))
                     applyRule
+                        clauses
                         (return
                              (fst
                                   (insertAndMoveToChild
@@ -358,6 +361,7 @@ applyRule ioTp n = do
                                     then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                                     else return (snd (snd (label treePos)))
                             applyRule
+                                clauses
                                 (return
                                      (fst
                                           (insertAndMoveToChild
@@ -377,6 +381,7 @@ applyRule ioTp n = do
                                                _ -> False
                                             then return False
                                             else isFunctionSymbolRecursive
+                                                     clauses
                                                      (Fun
                                                           (fromRight
                                                                (Data.Rewriting.Term.root
@@ -384,7 +389,7 @@ applyRule ioTp n = do
                                                           [])
                                                      (arityOfRootSymbol t)
                                     ((_:_,_,Just clause):_,_) ->
-                                        isClauseRecursive clause
+                                        isClauseRecursive clauses clause
                                     _ -> error "Error in heuristic"
                             if n >= minExSteps && b
                                 then if length (fst s) > 1
@@ -447,10 +452,10 @@ insertAndMoveToChild tp (l,r) =
 
 getInstanceCandidates
     :: (Monad m)
-    => (AbstractState, (String, Int))
+    => [Clause] -> (AbstractState, (String, Int))
     -> BTree (AbstractState, (String, Int))
     -> StateT Int m [(AbstractState, (String, Int))]
-getInstanceCandidates node graph = do
+getInstanceCandidates clauses node graph = do
     isRecursive <-
         if isNothing
                ((\(_,_,x) ->
@@ -465,6 +470,7 @@ getInstanceCandidates node graph = do
                            t)
                          node))
             then isFunctionSymbolRecursive
+                     clauses
                      (nodeHead node)
                      (arityOfRootSymbol
                           ((\(((t:_,_,Nothing):_,_),_) ->
@@ -478,7 +484,7 @@ getInstanceCandidates node graph = do
                    fst (snd x) /= "instanceChild" &&
                    (getVarNum (fst node) >= getVarNum (fst x) ||
                     (isRecursive &&
-                     branchingFactor (nodeHead node) > maxBranchingFactor)))
+                     branchingFactor clauses (nodeHead node) > maxBranchingFactor)))
              (Data.Foldable.toList graph))
 
 nodeHead :: (AbstractState, (String, Int)) -> Term'
@@ -496,9 +502,9 @@ getVarNum (ss,_) =
 
 isClauseRecursive
     :: (Monad m)
-    => Clause -> StateT Int m Bool
-isClauseRecursive (_,Nothing) = return False
-isClauseRecursive (_,Just b) =
+    => [Clause] -> Clause -> StateT Int m Bool
+isClauseRecursive _ (_,Nothing) = return False
+isClauseRecursive clauses (_,Just b) =
     (fmap or .
      mapM --anyM
          (\x ->
@@ -507,14 +513,15 @@ isClauseRecursive (_,Just b) =
                       _ -> False
                    then return False
                    else isFunctionSymbolRecursive
+                            clauses
                             (Fun (fromRight (Data.Rewriting.Term.root x)) [])
                             (arityOfRootSymbol x)))
         (getMetaPredications b)
 
 isFunctionSymbolRecursive
-    :: (Implicit_ [Clause], Monad m)
-    => Term' -> Int -> StateT Int m Bool
-isFunctionSymbolRecursive (Fun f _) arity =
+    :: Monad m
+    => [Clause] -> Term' -> Int -> StateT Int m Bool
+isFunctionSymbolRecursive clauses (Fun f _) arity =
     if f == "repeat" ||
        f `notElem`
        [ "abolish"
@@ -607,7 +614,7 @@ isFunctionSymbolRecursive (Fun f _) arity =
        , "write_term"
        , "writeq"]
         then do
-            clauses <-
+            clauses' <-
                 mapMaybeM
                     (\x -> do
                          let startF =
@@ -630,22 +637,23 @@ isFunctionSymbolRecursive (Fun f _) arity =
                     (filter
                          (\x ->
                                Right f == Data.Rewriting.Term.root (fst x))
-                         param_)
+                         clauses)
             (fmap or .
              mapM --anyM
                  (\x ->
                        isFunctionSymbolRecursive_
+                           clauses
                            f
                            [Data.Rewriting.Term.root (fst x)]
                            x))
-                clauses
+                clauses'
         else return False
-isFunctionSymbolRecursive _ _ = error "No function symbol provided."
+isFunctionSymbolRecursive _ _ _ = error "No function symbol provided."
 
 isFunctionSymbolRecursive_
-    :: (Implicit_ [Clause], Monad m)
-    => String -> [Either String String] -> Clause -> StateT Int m Bool
-isFunctionSymbolRecursive_ f hrs c = do
+    :: Monad m
+    => [Clause] -> String -> [Either String String] -> Clause -> StateT Int m Bool
+isFunctionSymbolRecursive_ clauses f hrs c = do
     his <-
         mapMaybeM
             (\(x,y) -> do
@@ -665,7 +673,7 @@ isFunctionSymbolRecursive_ f hrs c = do
                        Data.Rewriting.Term.root x ==
                        Data.Rewriting.Term.root (fst y))
                  (maybe [] getMetaPredications (snd c) `cartesianProduct`
-                  param_))
+                  clauses))
     if null his
         then return False
         else if any
@@ -679,6 +687,7 @@ isFunctionSymbolRecursive_ f hrs c = do
                           mapM --anyM
                               (\x ->
                                     isFunctionSymbolRecursive_
+                                        clauses
                                         f
                                         (Data.Rewriting.Term.root (fst x) : hrs)
                                         x))
@@ -700,14 +709,13 @@ getMetaPredications t@(Fun f args) =
 getMetaPredications v = [v]
 
 branchingFactor
-    :: Implicit_ [Clause]
-    => Term' -> Int
-branchingFactor (Fun f _) =
+    :: [Clause] -> Term' -> Int
+branchingFactor clauses (Fun f _) =
     length
         (filter
              (== Right f)
-             (map (Data.Rewriting.Term.root . fst) (param_ :: [Clause])))
-branchingFactor _ = error "No function symbol provided."
+             (map (Data.Rewriting.Term.root . fst) clauses))
+branchingFactor _ _ = error "No function symbol provided."
 
 applyGeneralizationStep
     :: AbstractState

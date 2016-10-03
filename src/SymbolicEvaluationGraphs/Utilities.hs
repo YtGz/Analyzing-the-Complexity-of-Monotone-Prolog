@@ -1,4 +1,5 @@
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wall  #-}
+
 module SymbolicEvaluationGraphs.Utilities
   (freshVariable
   ,instantiateWithFreshVariables
@@ -30,19 +31,6 @@ freshVariable =
         (\i ->
               (Var ("T" ++ show i), i + 1))
 
-{-instantiateWithFreshVariables
-  :: (Monad m)
-  => Term' -> Maybe Term' -> Control.Monad.State.StateT (Data.Map.Map Int Subst') (Control.Monad.State.StateT Int m) (Term', Maybe Term')
-instantiateWithFreshVariables h b =
-  let vs =
-          map
-              Var
-              (nub
-                        (Data.Rewriting.Term.vars
-                        h ++ maybe [] Data.Rewriting.Term.vars b) )
-  in do freshVariables <- mapFreshVariables (return vs)
-        let sub = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
-        return (apply sub h, fmap (apply sub) b)-}
 instantiateWithFreshVariables
     :: (Monad m)
     => [Term'] -> Control.Monad.State.StateT Int m ([Term'], Subst')
@@ -74,13 +62,8 @@ isAbstractVariable _ = error "Malformed term"
 
 -- check if no variable in the input program is of the format of our abstract variables
 hasNoAbstractVariables
-    :: [Clause] -> Bool
-hasNoAbstractVariables clauses =
-    let f t = not (any isAbstractVariable (vars t))
-    in all
-           (\(t,ts) ->
-                 f t && all f ts)
-           clauses
+    :: Term' -> Bool
+hasNoAbstractVariables t = not (any isAbstractVariable (vars t))
 
 termToClause :: Term' -> Clause
 termToClause (Fun ":-" args) = (head args, Just (head (tail args))) -- rule
