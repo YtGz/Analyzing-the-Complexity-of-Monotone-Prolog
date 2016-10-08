@@ -88,7 +88,7 @@ main = do
     putStrLn "No analysis required." >>
     exitSuccess)
   queryClass <- if length queryClasses > 1 then do
-        putStrLn "Multiple query classes detetected:"
+        putStrLn "Multiple query classes detected:"
         putStrLn ""
         mapM_ putStrLn (zipWith (\i c -> show i ++ ": " ++ show c) [0 :: Integer ..] queryClasses)
         putStrLn ""

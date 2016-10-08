@@ -1,9 +1,0 @@
-(VAR T11 T27 T28 T29)
-(RULES
-fin_s0(Left 0(),T11) ->
-  fout_s0(T11)
-fin_s0(s(T27),T28) ->
-  u_s0_s5(fin_s0(T27,T28),T27,T28)
-u_s0_s5(fout_s0(T29),T27,T28) ->
-  fout_s0(s(T29))
-)

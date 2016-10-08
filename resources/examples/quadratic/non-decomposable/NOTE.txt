@@ -1,2 +1,0 @@
-This is a collection of examples for which the symbolic evaluation graph is not decomposable, i.e. the complexity analysis fails.
-It is still possible to generate a TRS suitable for termination analysis, though. 
