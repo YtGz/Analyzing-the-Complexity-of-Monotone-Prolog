@@ -11,7 +11,7 @@ import Data.Function (on)
 import Data.List
 import qualified Data.Map
        (Map, elems, filter, filterWithKey, fromList, union, keys, insert,
-        member, lookup, empty, findWithDefault, map, unions)
+        member, lookup, map)
 import Data.Maybe
 
 import Data.Rewriting.Substitution (apply, compose, unify)
@@ -92,106 +92,6 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
         ( implicitGeneralization s1
         , implicitGeneralization (s, (g, u ++ [(t, h)])))
 eval _ = error "Cannot apply 'eval': Malformed AbstractState"
-
-flattenLists
-    :: (Monad m)
-    => AbstractState -> Control.Monad.State.StateT Int m AbstractState
-flattenLists ((ts,s,c):ss,(g,u)) = do
-    sub <-
-        Control.Monad.State.liftM
-            Data.Map.unions
-            (liftM2
-                 (++)
-                 (mapM (`flattenListsInTerm` Data.Map.empty) ts)
-                 (mapM
-                      (`flattenListsInTerm` Data.Map.empty)
-                      (Data.Map.elems (toMap s))))
-    return
-        ( ( map (`applyFlattening` sub) ts
-          , fromMap (Data.Map.map (`applyFlattening` sub) (toMap s))
-          , c) :
-          ss
-        , ( applyFlatteningToG g sub ((ts, s, c) : ss)
-          , map
-                ((`applyFlattening` Data.Map.filterWithKey
-                                        (\k _ ->
-                                              case k of
-                                                  Fun ":" [_,Fun "[]" []] ->
-                                                      False
-                                                  _ -> True)
-                                        sub) ***
-                 (`applyFlattening` Data.Map.filterWithKey
-                                        (\k _ ->
-                                              case k of
-                                                  Fun ":" [_,Fun "[]" []] ->
-                                                      False
-                                                  _ -> True)
-                                        sub))
-                u))
-flattenLists s@([],_) = return s
-
-flattenListsInTerm
-    :: (Monad m)
-    => Term'
-    -> Data.Map.Map Term' Term'
-    -> Control.Monad.State.StateT Int m (Data.Map.Map Term' Term')
---flattenListsInTerm (Fun ":" [_,Fun"[]" []]) = flatten that too ++ flatten generally anything with x:[] => x
-flattenListsInTerm (Fun ":" subterms) m =
-    Control.Monad.State.liftM
-        Data.Map.unions
-        (mapM (`flattenListsInTerm_` m) subterms)
-flattenListsInTerm (Fun _ subterms) m =
-    Control.Monad.State.liftM
-        Data.Map.unions
-        (mapM (`flattenListsInTerm` m) subterms)
-flattenListsInTerm _ m = return m
-
-flattenListsInTerm_
-    :: (Monad m)
-    => Term'
-    -> Data.Map.Map Term' Term'
-    -> Control.Monad.State.StateT Int m (Data.Map.Map Term' Term')
-flattenListsInTerm_ l@(Fun ":" _) m = do
-    v <- freshVariable
-    return (Data.Map.insert l v m)
-flattenListsInTerm_ (Fun _ subterms) m =
-    Control.Monad.State.liftM
-        Data.Map.unions
-        (mapM (`flattenListsInTerm_` m) subterms)
-flattenListsInTerm_ _ m = return m
-
-applyFlattening :: Term' -> Data.Map.Map Term' Term' -> Term'
-applyFlattening v@(Var _) sub = Data.Map.findWithDefault v v sub
-applyFlattening f@(Fun _ _) sub =
-    let f' = Data.Map.findWithDefault f f sub
-    in case f' of
-           Var _ -> f'
-           Fun f'' args -> Fun f'' (map (`applyFlattening` sub) args)
-
-applyFlatteningToG
-    :: [Term']
-    -> Data.Map.Map Term' Term'
-    -> SymbolicEvaluationGraphs.Types.State
-    -> [Term']
-applyFlatteningToG g sub ((ts,_,_):ss) =
-    filter
-        (`elem` map
-                    Var
-                    (nub
-                         (concatMap
-                              Data.Rewriting.Term.vars
-                              (map (`applyFlattening` sub) ts ++
-                               concatMap
-                                   (\(x,_,_) ->
-                                         x)
-                                   ss))))
-        g ++
-    Data.Map.elems
-        (Data.Map.filterWithKey
-             (\k _ ->
-                   all (`elem` g) (map Var (Data.Rewriting.Term.vars k)))
-             sub)
-applyFlatteningToG _ _ [] = error "Malformed abstract state"
 
 backtrack :: AbstractState -> AbstractState
 backtrack (state@((_,_,Just _):_),kb) = implicitGeneralization (tail state, kb)
