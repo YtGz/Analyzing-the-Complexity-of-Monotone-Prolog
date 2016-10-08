@@ -2,22 +2,24 @@
 {-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types, UndecidableInstances #-}
 module Main where
 
+import           Control.Monad.State
+import qualified Data.List
+import           Data.Map
+import           System.Console.GetOpt
 import           System.Environment
 import           System.Exit
 import           System.IO
-import           System.Console.GetOpt
+
+import           Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 import           Language.Prolog.Parser
-import           Query.Utilities
+
 import           ExprToTerm.Conversion (exprToTerm)
+import           Query.Utilities
+import           SymbolicEvaluationGraphs.Heuristic
 import           SymbolicEvaluationGraphs.Utilities (hasNoAbstractVariables, termToClause)
 import           SymbolicEvaluationGraphs.Visualization
-import           SymbolicEvaluationGraphs.Heuristic
 import           TRS.Encoding hiding (getNode)
 import           TRS.TPDB
-import           Data.Map
-import qualified Data.List
-import           Control.Monad.State
-import           Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
 
 
 data Options = Options  { optInputPath        :: FilePath

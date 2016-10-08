@@ -1,39 +1,40 @@
-{-# OPTIONS_GHC -Wall   #-}
+{-# OPTIONS_GHC -Wall    #-}
 {-# LANGUAGE FlexibleContexts #-}
-
 module SymbolicEvaluationGraphs.Heuristic where
 
+import Control.Arrow ((***), second)
+import Control.Lens (element, (.~))
+import Control.Monad.Extra (mapMaybeM)
+import Control.Monad.State
+import Control.Monad.Supply
+import Data.Either.Utils
 import Data.Foldable (toList)
-import Data.Maybe
 import Data.List (find, maximumBy)
 import Data.Map (Map, fromList, insertWith, union, elemAt)
 import qualified Data.Map
        (insert, toList, empty, map, lookup, singleton)
-import Control.Arrow ((***), second)
-import Control.Monad.State
-import Control.Monad.Extra (mapMaybeM)
-import Control.Monad.Supply
-import Data.Either.Utils
-import Data.Tree.Zipper
+import Data.Maybe
 import Data.Ord (comparing)
-import Control.Lens (element, (.~))
-import ExprToTerm.Conversion
-import Query.Utilities
+import Data.Tree
+import Data.Tree.Zipper
+
 import Data.Rewriting.Pos
-import Data.Rewriting.Term (vars, subtermAt, replaceAt)
-import Data.Rewriting.Term.Type (Term(..))
 import Data.Rewriting.Substitution (unify, apply)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
-import SymbolicEvaluationGraphs.Types
+import Data.Rewriting.Term (vars, subtermAt, replaceAt)
+import qualified Data.Rewriting.Term (root)
+import Data.Rewriting.Term.Type (Term(..))
+import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
+
+import ExprToTerm.Conversion
 import SymbolicEvaluationGraphs.InferenceRules
        (suc, caseRule, eval, backtrack, isBacktrackingApplicable, split,
         tryToApplyInstanceRule, parallel, arityOfRootSymbol,
         implicitGeneralization)
+import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities
        (freshVariable, instantiateWithFreshVariables)
-import Data.Tree
-import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
-import qualified Data.Rewriting.Term (root)
+import Query.Utilities
 
 minExSteps :: Int
 minExSteps = 1
@@ -51,7 +52,9 @@ graphSizeLimit :: Int
 graphSizeLimit = 400
 
 generateSymbolicEvaluationGraph
-    :: [Clause] -> QueryClass -> StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) (BTree (AbstractState, (String, Int)))
+    :: [Clause]
+    -> QueryClass
+    -> StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO) (BTree (AbstractState, (String, Int)))
 generateSymbolicEvaluationGraph clauses queryClass = do
     tp <-
         evalSupplyT
@@ -107,7 +110,8 @@ getInitialAbstractState (f,m) = do
     return ([([Fun f vs], fromMap (fromList []), Nothing)], (gs, []))
 
 applyRule
-    :: [Clause] -> IO (TreePos Full (AbstractState, (String, Int)))
+    :: [Clause]
+    -> IO (TreePos Full (AbstractState, (String, Int)))
     -> Int
     -> StateT Int (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (TreePos Full (AbstractState, (String, Int)))
 applyRule clauses ioTp n = do
@@ -301,7 +305,8 @@ applyRule clauses ioTp n = do
                                             (\(x,_) ->
                                                   (x, ("case", j)))
                                             treePos)
-                                       (Just (caseRule clauses s, ("", -1)), Nothing))))
+                                       ( Just (caseRule clauses s, ("", -1))
+                                       , Nothing))))
                         (n + 1)
                 gS = do
                     j <-
@@ -452,7 +457,8 @@ insertAndMoveToChild tp (l,r) =
 
 getInstanceCandidates
     :: (Monad m)
-    => [Clause] -> (AbstractState, (String, Int))
+    => [Clause]
+    -> (AbstractState, (String, Int))
     -> BTree (AbstractState, (String, Int))
     -> StateT Int m [(AbstractState, (String, Int))]
 getInstanceCandidates clauses node graph = do
@@ -484,7 +490,8 @@ getInstanceCandidates clauses node graph = do
                    fst (snd x) /= "instanceChild" &&
                    (getVarNum (fst node) >= getVarNum (fst x) ||
                     (isRecursive &&
-                     branchingFactor clauses (nodeHead node) > maxBranchingFactor)))
+                     branchingFactor clauses (nodeHead node) >
+                     maxBranchingFactor)))
              (Data.Foldable.toList graph))
 
 nodeHead :: (AbstractState, (String, Int)) -> Term'
@@ -652,7 +659,11 @@ isFunctionSymbolRecursive _ _ _ = error "No function symbol provided."
 
 isFunctionSymbolRecursive_
     :: Monad m
-    => [Clause] -> String -> [Either String String] -> Clause -> StateT Int m Bool
+    => [Clause]
+    -> String
+    -> [Either String String]
+    -> Clause
+    -> StateT Int m Bool
 isFunctionSymbolRecursive_ clauses f hrs c = do
     his <-
         mapMaybeM
@@ -708,13 +719,9 @@ getMetaPredications t@(Fun f args) =
         else []
 getMetaPredications v = [v]
 
-branchingFactor
-    :: [Clause] -> Term' -> Int
+branchingFactor :: [Clause] -> Term' -> Int
 branchingFactor clauses (Fun f _) =
-    length
-        (filter
-             (== Right f)
-             (map (Data.Rewriting.Term.root . fst) clauses))
+    length (filter (== Right f) (map (Data.Rewriting.Term.root . fst) clauses))
 branchingFactor _ _ = error "No function symbol provided."
 
 applyGeneralizationStep

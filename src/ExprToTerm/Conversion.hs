@@ -1,15 +1,10 @@
-{-# OPTIONS_GHC -Wall #-}
-module ExprToTerm.Conversion(
-    Term',
-    Subst',
-    Rule',
-    exprToTerm
-) where
+{-# OPTIONS_GHC -Wall   #-}
+module ExprToTerm.Conversion where
 
-import Language.Prolog.Syntax
-import Data.Rewriting.Term.Type(Term(..))
+import Data.Rewriting.Rule (Rule)
 import Data.Rewriting.Substitution (Subst)
-import Data.Rewriting.Rule(Rule)
+import Data.Rewriting.Term.Type (Term(..))
+import Language.Prolog.Syntax
 
 type Term' = Term String String
 

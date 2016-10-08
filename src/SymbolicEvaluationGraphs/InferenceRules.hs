@@ -1,23 +1,24 @@
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wall  #-}
 {-# LANGUAGE FlexibleContexts #-}
-
 module SymbolicEvaluationGraphs.InferenceRules where
 
-import Data.Maybe
-import Data.List
-import qualified Data.Map
-       (Map, elems, filter, filterWithKey, fromList, union, keys,
-        insert, member, lookup, empty, findWithDefault, map, unions)
 import Control.Arrow
 import Control.Monad.Supply
 import qualified Control.Monad.State
 import Control.Monad.Identity
 import Data.Bifunctor (bimap)
 import Data.Function (on)
+import Data.List
+import qualified Data.Map
+       (Map, elems, filter, filterWithKey, fromList, union, keys, insert,
+        member, lookup, empty, findWithDefault, map, unions)
+import Data.Maybe
+
 import Data.Rewriting.Substitution (apply, compose, unify)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import qualified Data.Rewriting.Term
 import Data.Rewriting.Term.Type (Term(..))
+
 import ExprToTerm.Conversion
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities
@@ -127,7 +128,7 @@ flattenLists ((ts,s,c):ss,(g,u)) = do
                                                   _ -> True)
                                         sub))
                 u))
-flattenLists s@([], _) = return s
+flattenLists s@([],_) = return s
 
 flattenListsInTerm
     :: (Monad m)
@@ -190,12 +191,12 @@ applyFlatteningToG g sub ((ts,_,_):ss) =
              (\k _ ->
                    all (`elem` g) (map Var (Data.Rewriting.Term.vars k)))
              sub)
-
 applyFlatteningToG _ _ [] = error "Malformed abstract state"
 
 backtrack :: AbstractState -> AbstractState
 backtrack (state@((_,_,Just _):_),kb) = implicitGeneralization (tail state, kb)
-backtrack _ = error "Backtracking should not be applicable to this abstract state"
+backtrack _ =
+    error "Backtracking should not be applicable to this abstract state"
 
 root :: Term' -> String
 root (Var s) = s
@@ -316,7 +317,9 @@ split ([(t:qs,_,Nothing)],(g,u)) = do
         , implicitGeneralization
               ( [(map (apply d) qs, d, Nothing)]
               , (g', map (apply d *** apply d) u)))
-split _ = error "Error in heuristic. Split rule should not be applicable to this abstract state"
+split _ =
+    error
+        "Error in heuristic. Split rule should not be applicable to this abstract state"
 
 nextG
     :: Term'

@@ -1,13 +1,15 @@
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wall  #-}
 module TRS.TPDB where
 
 import Data.List (nub)
 import System.IO
-import ExprToTerm.Conversion
-import Data.Rewriting.Rules (vars)
+
 import Data.Rewriting.Rule (prettyRule)
+import Data.Rewriting.Rules (vars)
 import Text.PrettyPrint.ANSI.Leijen
        (Doc, text, hPutDoc, (<$$>), vcat)
+
+import ExprToTerm.Conversion
 
 saveFileInTPDBFormat :: String -> [Rule'] -> IO ()
 saveFileInTPDBFormat filepath rules =
@@ -17,7 +19,13 @@ saveFileInTPDBFormat filepath rules =
         (`hPutDoc` (text
                         ("(VAR" ++ concatMap (" " ++) (nub (vars rules)) ++ ")") <$$>
                     text "(RULES" <$$>
-                    vcat (map (prettyRule (text "->") (text . concat . words) text) rules) <$$>
+                    vcat
+                        (map
+                             (prettyRule
+                                  (text "->")
+                                  (text . concat . words)
+                                  text)
+                             rules) <$$>
                     text ")"))
 
 concatSaveFileInTPDBFormat :: String -> [[Rule']] -> IO ()

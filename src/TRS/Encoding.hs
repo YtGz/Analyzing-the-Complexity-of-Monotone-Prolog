@@ -1,22 +1,23 @@
-{-# OPTIONS_GHC -Wall  #-}
-
+{-# OPTIONS_GHC -Wall   #-}
 module TRS.Encoding where
 
 import Control.Monad.State
-import SymbolicEvaluationGraphs.Types (AbstractState, G)
-import SymbolicEvaluationGraphs.InferenceRules (nextG)
-import ExprToTerm.Conversion (Term', Subst', Rule')
 import Data.List (intersect, union, nub, nubBy, (\\))
 import Data.Map
        (Map, difference, fromList, toList, intersectionWith,
         filterWithKey)
 import qualified Data.Map (filter)
 import Data.Maybe (fromJust, isJust, listToMaybe)
-import Data.Rewriting.Term (Term(..), vars)
+
+import Data.Rewriting.Rule (Rule(..))
 import Data.Rewriting.Substitution (apply, merge)
 import Data.Rewriting.Substitution.Type (toMap, fromMap)
-import Data.Rewriting.Rule (Rule(..))
+import Data.Rewriting.Term (Term(..), vars)
 import Diagrams.TwoD.Layout.Tree (BTree(BNode, Empty))
+
+import ExprToTerm.Conversion (Term', Subst', Rule')
+import SymbolicEvaluationGraphs.InferenceRules (nextG)
+import SymbolicEvaluationGraphs.Types (AbstractState, G)
 
 generateRewriteRules
     :: BTree (AbstractState, (String, Int))
@@ -73,7 +74,7 @@ encodeOut (BNode ((ss,(g,_)),(_,i)) _ _) =
     zipWithM
         f
         (map
-             (\(ts,_,_) -> 
+             (\(ts,_,_) ->
                    ts)
              ss)
         [0 :: Integer ..]

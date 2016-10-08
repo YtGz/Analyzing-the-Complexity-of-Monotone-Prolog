@@ -1,21 +1,23 @@
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wall   #-}
 module SymbolicEvaluationGraphs.Visualization where
 
-import ExprToTerm.Conversion
-import Data.Rewriting.Term.Type (Term(..))
-import SymbolicEvaluationGraphs.Types
-import SymbolicEvaluationGraphs.Utilities (splitClauseBody)
-import Data.Rewriting.Substitution.Type (toMap, fromMap)
+import Control.Concurrent (threadDelay, forkIO, killThread)
+import Data.Function (fix)
 import Data.Map (toList, fromList)
 import Data.Maybe
-import Data.Function (fix)
 import Data.String.Utils
 import System.IO (hSetBuffering, stdout, BufferMode(NoBuffering))
-import Diagrams.Prelude
+
+import Data.Rewriting.Substitution.Type (toMap, fromMap)
+import Data.Rewriting.Term.Type (Term(..))
 import Diagrams.Backend.SVG (B, renderSVG)
+import Diagrams.Prelude
 import Diagrams.TwoD.Layout.Tree
 import Graphics.SVGFonts
-import Control.Concurrent (threadDelay, forkIO, killThread)
+
+import ExprToTerm.Conversion
+import SymbolicEvaluationGraphs.Types
+import SymbolicEvaluationGraphs.Utilities (splitClauseBody)
 
 --TODO: draw dashed arrows to instance father for instance rule
 printSymbolicEvaluationGraph

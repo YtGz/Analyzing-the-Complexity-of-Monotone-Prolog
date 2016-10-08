@@ -1,30 +1,31 @@
-{-# OPTIONS_GHC -Wall  #-}
-
+{-# OPTIONS_GHC -Wall   #-}
 module SymbolicEvaluationGraphs.Utilities
-  (freshVariable
-  ,instantiateWithFreshVariables
-  ,mapFreshVariables
-  ,isAbstractVariable
+  (applyToSubKeys
+  ,freshVariable
   ,hasNoAbstractVariables
-  ,termToClause
+  ,instantiateWithFreshVariables
+  ,isAbstractVariable
+  ,mapFreshVariables
   ,splitClauseBody
-  ,applyToSubKeys)
+  ,termToClause)
   where
 
 import qualified Control.Monad.State
-import ExprToTerm.Conversion
-import Data.Rewriting.Term.Type (Term(..))
-import SymbolicEvaluationGraphs.Types
+import Data.List (nub)
+import Data.Map (Map, fromList, toList, unions, empty)
+import Data.Maybe
+import Text.Read (readMaybe)
+
 import Data.Rewriting.Substitution (unify, apply)
 import Data.Rewriting.Substitution.Type (fromMap, toMap)
 import Data.Rewriting.Term (vars)
-import Text.Read (readMaybe)
-import Data.Maybe
-import Data.List (nub)
-import Data.Map (Map, fromList, toList, unions, empty)
+import Data.Rewriting.Term.Type (Term(..))
+
+import ExprToTerm.Conversion
+import SymbolicEvaluationGraphs.Types
 
 freshVariable
-    :: (Monad m)
+    :: Monad m
     => (Control.Monad.State.StateT Int m) Term'
 freshVariable =
     Control.Monad.State.state
@@ -32,7 +33,7 @@ freshVariable =
               (Var ("T" ++ show i), i + 1))
 
 instantiateWithFreshVariables
-    :: (Monad m)
+    :: Monad m
     => [Term'] -> Control.Monad.State.StateT Int m ([Term'], Subst')
 instantiateWithFreshVariables ts =
     let vs = map Var (nub (concatMap Data.Rewriting.Term.vars ts))
@@ -42,7 +43,7 @@ instantiateWithFreshVariables ts =
 
 --TODO: there has to be a higher-order function that can be used instead
 mapFreshVariables
-    :: (Monad m)
+    :: Monad m
     => Control.Monad.State.StateT Int m [Term']
     -> Control.Monad.State.StateT Int m [Term']
 mapFreshVariables s = do
