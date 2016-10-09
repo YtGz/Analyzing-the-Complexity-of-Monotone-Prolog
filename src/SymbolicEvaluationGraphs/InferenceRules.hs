@@ -179,7 +179,7 @@ isBacktrackingApplicable ((t:_,_,Just (h,_)):_,(_,u)) =
     isNothing c ||
     any
         (\(t1,t2) ->
-              isJust (unify (apply (fromJust c) t1) (apply (fromJust c) t2)))
+              apply (fromJust c) t1 == apply (fromJust c) t2)
         u
   where
     c = unify t h
