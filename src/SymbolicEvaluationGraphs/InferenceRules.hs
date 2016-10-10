@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wall  #-}
+{-# OPTIONS_GHC -Wall    #-}
 {-# LANGUAGE FlexibleContexts #-}
 module SymbolicEvaluationGraphs.InferenceRules where
 
@@ -293,7 +293,27 @@ tryToApplyInstanceRule
 tryToApplyInstanceRule _ [] = Nothing
 tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) ((([(qs',_,c')],(g',u')),(_,i)):xs) =
     if c == c' && length qs == length qs'
-        then let mu = nubBy ((==) `on` fmap toMap) (zipWith unify qs' qs)
+        then let mu =
+                     nubBy
+                         ((==) `on` fmap toMap)
+                         (zipWith
+                              (\x y ->
+                                    maybe
+                                        Nothing
+                                        (\m ->
+                                              if apply m x == y
+                                                  then Just
+                                                           (fromMap
+                                                                (Data.Map.filterWithKey
+                                                                     (\var _ ->
+                                                                           var `elem`
+                                                                           Data.Rewriting.Term.vars
+                                                                               x)
+                                                                     (toMap m)))
+                                                  else Nothing)
+                                        (unify x y))
+                              qs'
+                              qs)
              in if length mu == 1 &&
                    isJust (head mu) &&
                    (\ys zs ->
