@@ -860,7 +860,7 @@ findFiniteGeneralizationPosition t =
                 in Just
                        (fix
                             (\f s t' pos i path ->
-                                  case t of
+                                  case t' of
                                       Fun s' _
                                         | s' == s ->
                                             if i == finiteGeneralizationPos
