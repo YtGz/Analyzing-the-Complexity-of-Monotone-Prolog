@@ -1,6 +1,4 @@
 {-# OPTIONS_GHC -Wall   #-}
-{-# LANGUAGE FlexibleInstances, FlexibleContexts, Rank2Types,
-  UndecidableInstances #-}
 module Main where
 
 import Control.Monad.State

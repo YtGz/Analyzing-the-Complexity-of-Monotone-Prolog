@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wall    #-}
-{-# LANGUAGE FlexibleContexts #-}
 module SymbolicEvaluationGraphs.Heuristic where
 
 import Control.Arrow ((***), second)

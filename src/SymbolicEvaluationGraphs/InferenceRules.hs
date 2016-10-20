@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wall    #-}
-{-# LANGUAGE FlexibleContexts #-}
 module SymbolicEvaluationGraphs.InferenceRules where
 
 import Control.Arrow
