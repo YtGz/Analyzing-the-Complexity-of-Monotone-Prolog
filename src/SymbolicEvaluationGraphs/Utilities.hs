@@ -1,11 +1,13 @@
-{-# OPTIONS_GHC -Wall   #-}
+{-# OPTIONS_GHC -Wall    #-}
+
 module SymbolicEvaluationGraphs.Utilities
   (applyToSubKeys
   ,freshVariable
+  ,freshAbstractVariable
   ,hasNoAbstractVariables
-  ,instantiateWithFreshVariables
+  ,instantiateWithFreshAbstractVariables
+  ,renameVariables
   ,isAbstractVariable
-  ,mapFreshVariables
   ,splitClauseBody
   ,termToClause)
   where
@@ -26,34 +28,51 @@ import SymbolicEvaluationGraphs.Types
 
 freshVariable
     :: Monad m
-    => (Control.Monad.State.StateT Int m) Term'
+    => (Control.Monad.State.StateT (Int, Int) m) Term'
 freshVariable =
     Control.Monad.State.state
-        (\i ->
-              (Var ("T" ++ show i), i + 1))
+        (\(i,j) ->
+              (Var ("X" ++ show j), (i, j + 1)))
 
-instantiateWithFreshVariables
+freshAbstractVariable
     :: Monad m
-    => [Term'] -> Control.Monad.State.StateT Int m ([Term'], Subst')
-instantiateWithFreshVariables ts =
-    let vs = map Var (nub (concatMap Data.Rewriting.Term.vars ts))
-    in do freshVariables <- mapFreshVariables (return vs)
+    => (Control.Monad.State.StateT (Int, Int) m) Term'
+freshAbstractVariable =
+    Control.Monad.State.state
+        (\(i,j) ->
+              (Var ("T" ++ show i), (i + 1, j)))
+
+-- Replace all variables of the head of a clause with fresh abstract variables
+instantiateWithFreshAbstractVariables
+    :: Monad m
+    => [Term'] -> Control.Monad.State.StateT (Int, Int) m ([Term'], Subst')
+instantiateWithFreshAbstractVariables ts =
+    let vs = map Var (nub (Data.Rewriting.Term.vars (head ts)))
+    in do freshVariables <- mapM (const freshAbstractVariable) vs
           let sub = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
           return (map (apply sub) ts, sub)
 
---TODO: there has to be a higher-order function that can be used instead
-mapFreshVariables
+-- Replace all non-abstract variables with fresh (non-abstract) variables
+renameVariables
     :: Monad m
-    => Control.Monad.State.StateT Int m [Term']
-    -> Control.Monad.State.StateT Int m [Term']
-mapFreshVariables s = do
-    l <- s
-    case l of
-        [] -> return []
-        (_:xs) -> do
-            v <- freshVariable
-            vs <- mapFreshVariables (return xs)
-            return (v : vs)
+    => [Term'] -> Control.Monad.State.StateT (Int, Int) m [Term']
+renameVariables ts = do
+    let vs = nub (concatMap vars ts)
+    sub <-
+        Control.Monad.State.liftM
+            fromMap
+            (Control.Monad.State.liftM
+                 fromList
+                 (Control.Monad.State.liftM2
+                      zip
+                      (return vs)
+                      (mapM
+                           (\v ->
+                                 if isAbstractVariable v
+                                     then return (Var v)
+                                     else freshVariable)
+                           vs)))
+    return (map (apply sub) ts)
 
 -- abstract variables have the format "T" ++ [Int]
 isAbstractVariable

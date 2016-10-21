@@ -43,12 +43,13 @@ caseRule clauses ((t:qs,sub,Nothing):s,kb) =
 caseRule _ _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 
 eval
-    :: (Monad m)
+    :: Monad m
     => AbstractState
-    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') m))) (AbstractState, AbstractState)
+    -> Control.Monad.State.StateT (Int,Int) (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') m))) (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
-    (h_:b_,_) <- instantiateWithFreshVariables (h : maybeToList b)
-    ([t_],freshVarSub) <- instantiateWithFreshVariables [t]
+    (h_:b'_,_) <- instantiateWithFreshAbstractVariables (h : maybeToList b) --instantiateWithFreshVariables (h : maybeToList b)
+    b_ <- renameVariables b'_
+    ([t_],freshVarSub) <- instantiateWithFreshAbstractVariables [t]
     let g_ = map (apply freshVarSub) g
         qs_ = map (apply freshVarSub) qs
         sub_ = compose freshVarSub sub
@@ -193,7 +194,7 @@ arityOfRootSymbol (Var _) = error "Variables have no arity"
 -- split rule for states with a single goal
 split
     :: AbstractState
-    -> Control.Monad.State.StateT Int (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') IO))) (AbstractState, AbstractState)
+    -> Control.Monad.State.StateT (Int,Int) (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') IO))) (AbstractState, AbstractState)
 split ([(t:qs,_,Nothing)],(g,u)) = do
     let vs =
             map
@@ -202,7 +203,7 @@ split ([(t:qs,_,Nothing)],(g,u)) = do
                      (Data.Rewriting.Term.vars t ++
                       concatMap Data.Rewriting.Term.vars qs)) \\
             g
-    freshVariables <- mapFreshVariables (return vs)
+    freshVariables <- mapM (const freshAbstractVariable) vs
     let d = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
     g' <-
         Control.Monad.State.lift

@@ -32,7 +32,7 @@ import SymbolicEvaluationGraphs.InferenceRules
         implicitGeneralization)
 import SymbolicEvaluationGraphs.Types
 import SymbolicEvaluationGraphs.Utilities
-       (freshVariable, instantiateWithFreshVariables)
+       (freshAbstractVariable, instantiateWithFreshAbstractVariables)
 import Query.Utilities
 
 minExSteps :: Int
@@ -63,7 +63,7 @@ generateSymbolicEvaluationGraph clauses queryClass = do
                          clauses
                          (return (fromTree (Node (initialState, ("", -1)) [])))
                          0)
-                 0)
+                 (0,0))
             [0 ..]
     return (roseTreeToBTree (toTree tp))
 
@@ -94,13 +94,13 @@ followThePath t = foldr ($) (fromTree t)
 
 getInitialAbstractState
     :: (Monad m)
-    => QueryClass -> (StateT Int m) AbstractState
+    => QueryClass -> StateT (Int,Int) m AbstractState
 getInitialAbstractState (f,m) = do
     (vs,gs) <-
         foldr
             (\x s -> do
                  (vs,gs) <- s
-                 v <- freshVariable
+                 v <- freshAbstractVariable
                  case x of
                      In -> return (v : vs, v : gs)
                      Out -> return (v : vs, gs))
@@ -112,7 +112,7 @@ applyRule
     :: [Clause]
     -> IO (TreePos Full (AbstractState, (String, Int)))
     -> Int
-    -> StateT Int (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (TreePos Full (AbstractState, (String, Int)))
+    -> StateT (Int,Int) (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (TreePos Full (AbstractState, (String, Int)))
 applyRule clauses ioTp n = do
     treePos <- Control.Monad.State.liftIO ioTp
     progress <- peek
@@ -121,7 +121,7 @@ applyRule clauses ioTp n = do
         else do
             let s = fst (label treePos)
             let ss =
-                    eval s :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (AbstractState, AbstractState)
+                    eval s :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) (AbstractState, AbstractState)
                 s0 = do
                     ev <- ss
                     return (fst ev)
@@ -143,7 +143,7 @@ applyRule clauses ioTp n = do
                         ((_:_,_,_):_,_) -> do
                             j <-
                                 if snd (snd (label treePos)) == -1
-                                    then peek :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                                    then peek :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                                     else return (snd (snd (label treePos)))
                             let newTp =
                                     modifyLabel
@@ -161,7 +161,7 @@ applyRule clauses ioTp n = do
                                 then do
                                     j' <-
                                         if snd (snd (label treePos)) == -1
-                                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                                            then supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                                             else return
                                                      (snd (snd (label treePos)))
                                     let newTp' =
@@ -206,9 +206,9 @@ applyRule clauses ioTp n = do
                     s0' <- s0
                     s1' <- s1
                     j1 <-
-                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                        supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     j2 <-
-                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                        supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     return
                         (insertAndMoveToChild
                              treePos
@@ -217,18 +217,18 @@ applyRule clauses ioTp n = do
                     sp0' <- sp0
                     sp1' <- sp1
                     j1 <-
-                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                        supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     j2 <-
-                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                        supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     return
                         (insertAndMoveToChild
                              treePos
                              (Just (sp0', ("", j1)), Just (sp1', ("", j2))))
                 cs2 = do
                     j1 <-
-                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                        supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     j2 <-
-                        supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                        supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                     return
                         (insertAndMoveToChild
                              treePos
@@ -236,7 +236,7 @@ applyRule clauses ioTp n = do
                 e = do
                     j <-
                         if snd (snd (label treePos)) == -1
-                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                            then supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return (snd (snd (label treePos)))
                     cs0' <- cs0
                     l <-
@@ -255,7 +255,7 @@ applyRule clauses ioTp n = do
                 sp = do
                     j <-
                         if snd (snd (label treePos)) == -1
-                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                            then supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return (snd (snd (label treePos)))
                     cs1' <- cs1
                     l <-
@@ -274,7 +274,7 @@ applyRule clauses ioTp n = do
                 par = do
                     j <-
                         if snd (snd (label treePos)) == -1
-                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                            then supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return (snd (snd (label treePos)))
                     cs2' <- cs2
                     l <-
@@ -293,7 +293,7 @@ applyRule clauses ioTp n = do
                 c = do
                     j <-
                         if snd (snd (label treePos)) == -1
-                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                            then supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return (snd (snd (label treePos)))
                     applyRule
                         clauses
@@ -310,7 +310,7 @@ applyRule clauses ioTp n = do
                 gS = do
                     j <-
                         if snd (snd (label treePos)) == -1
-                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                            then supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return (snd (snd (label treePos)))
                     genStep <- applyGeneralizationStep s j
                     applyRule
@@ -340,7 +340,7 @@ applyRule clauses ioTp n = do
                 (([],_,_):_,_) -> do
                     j <-
                         if snd (snd (label treePos)) == -1
-                            then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                            then supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                             else return (snd (snd (label treePos)))
                     applyRule
                         clauses
@@ -362,7 +362,7 @@ applyRule clauses ioTp n = do
                         then do
                             j <-
                                 if snd (snd (label treePos)) == -1
-                                    then supply :: StateT Int (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
+                                    then supply :: StateT (Int,Int) (SupplyT Int (StateT (Data.Map.Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) Int
                                     else return (snd (snd (label treePos)))
                             applyRule
                                 clauses
@@ -459,7 +459,7 @@ getInstanceCandidates
     => [Clause]
     -> (AbstractState, (String, Int))
     -> BTree (AbstractState, (String, Int))
-    -> StateT Int m [(AbstractState, (String, Int))]
+    -> StateT (Int,Int) m [(AbstractState, (String, Int))]
 getInstanceCandidates clauses node graph = do
     isRecursive <-
         if isNothing
@@ -508,7 +508,7 @@ getVarNum (ss,_) =
 
 isClauseRecursive
     :: (Monad m)
-    => [Clause] -> Clause -> StateT Int m Bool
+    => [Clause] -> Clause -> StateT (Int,Int) m Bool
 isClauseRecursive _ (_,Nothing) = return False
 isClauseRecursive clauses (_,Just b) =
     (fmap or .
@@ -526,7 +526,7 @@ isClauseRecursive clauses (_,Just b) =
 
 isFunctionSymbolRecursive
     :: Monad m
-    => [Clause] -> Term' -> Int -> StateT Int m Bool
+    => [Clause] -> Term' -> Int -> StateT (Int,Int) m Bool
 isFunctionSymbolRecursive clauses (Fun f _) arity =
     if f == "repeat" ||
        f `notElem`
@@ -630,7 +630,7 @@ isFunctionSymbolRecursive clauses (Fun f _) arity =
                                           (Var . show)
                                           (take arity [1 :: Integer,2 ..]))
                          (x',_) <-
-                             instantiateWithFreshVariables
+                             instantiateWithFreshAbstractVariables
                                  (fst x : maybeToList (snd x))
                          let sub = unify startF (head x') --TODO: save state at beginning of this function and restore it at the end
                          if isJust sub
@@ -662,13 +662,13 @@ isFunctionSymbolRecursive_
     -> String
     -> [Either String String]
     -> Clause
-    -> StateT Int m Bool
+    -> StateT (Int,Int) m Bool
 isFunctionSymbolRecursive_ clauses f hrs c = do
     his <-
         mapMaybeM
             (\(x,y) -> do
                  (y',_) <-
-                     instantiateWithFreshVariables
+                     instantiateWithFreshAbstractVariables
                          (fst y : maybeToList (snd y))
                  let sub = unify x (head y') --TODO: save state at beginning of this function and restore it at the end
                  if isJust sub
@@ -726,7 +726,7 @@ branchingFactor _ _ = error "No function symbol provided."
 applyGeneralizationStep
     :: AbstractState
     -> Int
-    -> StateT Int (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) AbstractState
+    -> StateT (Int,Int) (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) AbstractState
 applyGeneralizationStep s nodePos =
     applyGeneralizationStep_ [] s nodePos (fst (snd s))
 
@@ -735,7 +735,7 @@ applyGeneralizationStep_
     -> AbstractState
     -> Int
     -> G
-    -> StateT Int (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) AbstractState
+    -> StateT (Int,Int) (SupplyT Int (StateT (Map (String, Int, [Int]) [Int]) (StateT (Map Int Subst') IO))) AbstractState
 applyGeneralizationStep_ r s nodePos g = do
     let ts =
             map
@@ -775,7 +775,7 @@ applyGeneralizationStep_ r s nodePos g = do
                         (\x ->
                               fromJust (subtermAt t pos) == fst x)
                         r
-            freshVar <- freshVariable
+            freshVar <- freshAbstractVariable
             when
                 (all
                      (`elem` fst (snd s))
