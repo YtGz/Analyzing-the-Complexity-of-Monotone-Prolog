@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wall    #-}
-
 module SymbolicEvaluationGraphs.Utilities
   (applyToSubKeys
   ,freshVariable

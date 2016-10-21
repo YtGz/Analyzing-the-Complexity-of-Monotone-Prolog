@@ -45,7 +45,7 @@ caseRule _ _ = error "Cannot apply 'caseRule': Malformed AbstractState"
 eval
     :: Monad m
     => AbstractState
-    -> Control.Monad.State.StateT (Int,Int) (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') m))) (AbstractState, AbstractState)
+    -> Control.Monad.State.StateT (Int, Int) (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') m))) (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
     (h_:b'_,_) <- instantiateWithFreshAbstractVariables (h : maybeToList b) --instantiateWithFreshVariables (h : maybeToList b)
     b_ <- renameVariables b'_
@@ -194,7 +194,7 @@ arityOfRootSymbol (Var _) = error "Variables have no arity"
 -- split rule for states with a single goal
 split
     :: AbstractState
-    -> Control.Monad.State.StateT (Int,Int) (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') IO))) (AbstractState, AbstractState)
+    -> Control.Monad.State.StateT (Int, Int) (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') IO))) (AbstractState, AbstractState)
 split ([(t:qs,_,Nothing)],(g,u)) = do
     let vs =
             map
@@ -316,6 +316,14 @@ tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) ((([(qs',_,c')],(g',u')),(_,i)):xs) 
                               qs)
              in if length mu == 1 &&
                    isJust (head mu) &&
+                   all
+                       isAbstractVariable
+                       (Data.Map.keys (toMap (fromJust (head mu)))) &&
+                   all
+                       isAbstractVariable
+                       (concatMap
+                            Data.Rewriting.Term.vars
+                            (Data.Map.elems (toMap (fromJust (head mu))))) &&
                    (\ys zs ->
                          null (ys \\ zs) && null (zs \\ ys))
                        (nub g)
