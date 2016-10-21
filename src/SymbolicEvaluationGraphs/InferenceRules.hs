@@ -6,7 +6,6 @@ import Control.Monad.Supply
 import qualified Control.Monad.State
 import Control.Monad.Identity
 import Data.Bifunctor (bimap)
-import Data.Function (on)
 import Data.List
 import qualified Data.Map
        (Map, elems, filter, filterWithKey, fromList, union, keys, insert,
@@ -50,15 +49,21 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
     (h_:b'_,_) <- instantiateWithFreshAbstractVariables (h : maybeToList b) --instantiateWithFreshVariables (h : maybeToList b)
     b_ <- renameVariables b'_
     ([t_],freshVarSub) <- instantiateWithFreshAbstractVariables [t]
-    let g_ = map (apply freshVarSub) g
+    let g_ = map (apply (restrictSubstToG freshVarSub g)) g
         qs_ = map (apply freshVarSub) qs
         sub_ = compose freshVarSub sub
         s_ =
             map
                 (\(t',s',c') ->
-                      (map (apply freshVarSub) t', compose freshVarSub s', c'))
+                      ( map (apply (restrictSubstToG freshVarSub g)) t'
+                      , compose (restrictSubstToG freshVarSub g) s'
+                      , c'))
                 s
-        u_ = map (apply freshVarSub *** apply freshVarSub) u
+        u_ =
+            map
+                (apply (restrictSubstToGForU freshVarSub g) ***
+                 apply (restrictSubstToGForU freshVarSub g))
+                u
         (Just mgu) = unify t_ h_
         mguG = restrictSubstToG mgu g_
         mguGAndRenaming = restrictSubstToGForU mgu g_
@@ -196,13 +201,7 @@ split
     :: AbstractState
     -> Control.Monad.State.StateT (Int, Int) (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') IO))) (AbstractState, AbstractState)
 split ([(t:qs,_,Nothing)],(g,u)) = do
-    let vs =
-            map
-                Var
-                (nub
-                     (Data.Rewriting.Term.vars t ++
-                      concatMap Data.Rewriting.Term.vars qs)) \\
-            g
+    let vs = map Var (nub (Data.Rewriting.Term.vars t)) \\ g
     freshVariables <- mapM (const freshAbstractVariable) vs
     let d = fromJust (unify (Fun "" vs) (Fun "" freshVariables))
     g' <-
@@ -294,50 +293,54 @@ tryToApplyInstanceRule _ [] = Nothing
 tryToApplyInstanceRule n@([(qs,_,c)],(g,u)) ((([(qs',_,c')],(g',u')),(_,i)):xs) =
     if c == c' && length qs == length qs'
         then let mu =
-                     nubBy
-                         ((==) `on` fmap toMap)
-                         (zipWith
-                              (\x y ->
-                                    maybe
-                                        Nothing
-                                        (\m ->
-                                              if apply m x == y
-                                                  then Just
-                                                           (fromMap
-                                                                (Data.Map.filterWithKey
-                                                                     (\var _ ->
-                                                                           var `elem`
-                                                                           Data.Rewriting.Term.vars
-                                                                               x)
-                                                                     (toMap m)))
-                                                  else Nothing)
-                                        (unify x y))
-                              qs'
-                              qs)
-             in if length mu == 1 &&
-                   isJust (head mu) &&
-                   all
-                       isAbstractVariable
-                       (Data.Map.keys (toMap (fromJust (head mu)))) &&
-                   all
-                       isAbstractVariable
-                       (concatMap
-                            Data.Rewriting.Term.vars
-                            (Data.Map.elems (toMap (fromJust (head mu))))) &&
-                   (\ys zs ->
-                         null (ys \\ zs) && null (zs \\ ys))
-                       (nub g)
-                       (nub
-                            (concatMap
-                                 (map Var .
-                                  Data.Rewriting.Term.vars .
-                                  apply (fromJust (head mu)))
-                                 g')) &&
-                   null
-                       (map (join bimap (apply (fromJust (head mu)))) (nub u') \\
-                        nub u)
+                     (\x y ->
+                           maybe
+                               Nothing
+                               (\m ->
+                                     if apply m x == y
+                                         then Just
+                                                  (fromMap
+                                                       (Data.Map.filterWithKey
+                                                            (\var _ ->
+                                                                  var `elem`
+                                                                  Data.Rewriting.Term.vars
+                                                                      x)
+                                                            (toMap m)))
+                                         else Nothing)
+                               (unify x y))
+                         (Fun "," qs')
+                         (Fun "," qs)
+             in if isJust mu &&
+                   let muWithoutPureRenaming =
+                           Data.Map.filterWithKey
+                               (\k v ->
+                                     isAbstractVariable k ||
+                                     any
+                                         isAbstractVariable
+                                         (Data.Rewriting.Term.vars v))
+                               (toMap (fromJust mu))
+                   in all
+                          isAbstractVariable
+                          (Data.Map.keys muWithoutPureRenaming) &&
+                      all
+                          isAbstractVariable
+                          (concatMap
+                               Data.Rewriting.Term.vars
+                               (Data.Map.elems muWithoutPureRenaming)) &&
+                      (\ys zs ->
+                            null (ys \\ zs) && null (zs \\ ys))
+                          (nub g)
+                          (nub
+                               (concatMap
+                                    (map Var .
+                                     Data.Rewriting.Term.vars .
+                                     apply (fromJust mu))
+                                    g')) &&
+                      null
+                          (map (join bimap (apply (fromJust mu))) (nub u') \\
+                           nub u)
                     then Just
-                             ( ([(qs', fromJust (head mu), c')], (g', u'))
+                             ( ([(qs', fromJust mu, c')], (g', u'))
                              , ("instanceChild", i))
                     else tryToApplyInstanceRule n xs
         else tryToApplyInstanceRule n xs
