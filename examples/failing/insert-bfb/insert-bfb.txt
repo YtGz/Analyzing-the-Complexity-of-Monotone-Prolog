@@ -1,0 +1,90 @@
+(VAR T51 T59 T178 T392 T527 T528 T529 T648 T651 T650 T842 T843 T845 T224)
+(RULES
+fin_s0(T51
+      ,tree(T51,void(),void())) ->
+  fout_s0()
+fin_s0(T59
+      ,tree(T59,void(),void())) ->
+  fout_s0()
+fin_s0(T178
+      ,tree(T178,void(),void())) ->
+  u_s0_s10(fin_s10(T178)
+          ,T178
+          ,tree(T178,void(),void()))
+u_s0_s10(fout_s10()
+        ,T178
+        ,tree(T178,void(),void())) ->
+  fout_s0()
+fin_s0(T392
+      ,tree(T392,void(),void())) ->
+  u_s0_s22(fin_s22(T392)
+          ,T392
+          ,tree(T392,void(),void()))
+u_s0_s22(fout_s22()
+        ,T392
+        ,tree(T392,void(),void())) ->
+  fout_s0()
+fin_s0(T527
+      ,tree(T527,T528,T529)) ->
+  fout_s0()
+fin_s0(T648
+      ,tree(T648,T651,T650)) ->
+  u_s0_s32(fin_s32(T648,T651)
+          ,T648
+          ,tree(T648,T651,T650))
+u_s0_s32(fout_s32()
+        ,T648
+        ,tree(T648,T651,T650)) ->
+  fout_s0()
+fin_s0(T842
+      ,tree(T842,T843,T845)) ->
+  u_s0_s36(fin_s36(T842,T845)
+          ,T842
+          ,tree(T842,T843,T845))
+u_s0_s36(fout_s36()
+        ,T842
+        ,tree(T842,T843,T845)) ->
+  fout_s0()
+fin_s12(s(T224)) ->
+  u_s12_s16(fin_s12(T224),s(T224))
+u_s12_s16(fout_s12(),s(T224)) ->
+  fout_s12()
+fin_s10(T178) ->
+  u_s10_s12(fin_s12(T178),T178)
+u_s10_s12(fout_s12(),T178) ->
+  u_s12_s13(fin_s13(T178),T178)
+u_s12_s13(fout_s13(),T178) ->
+  fout_s10()
+fin_s22(T392) ->
+  u_s22_s24(fin_s12(T392),T392)
+u_s22_s24(fout_s12(),T392) ->
+  u_s24_s25(fin_s13(T392),T392)
+u_s24_s25(fout_s13(),T392) ->
+  fout_s22()
+fin_s32(T648,T651) ->
+  u_s32_s34(fin_s12(T648)
+           ,T648
+           ,T651)
+u_s32_s34(fout_s12()
+         ,T648
+         ,T651) -> u_s34_s35(fin_s0(T648
+                                   ,T651)
+                            ,T648
+                            ,T651)
+u_s34_s35(fout_s0()
+         ,T648
+         ,T651) -> fout_s32()
+fin_s36(T842,T845) ->
+  u_s36_s38(fin_s12(T842)
+           ,T842
+           ,T845)
+u_s36_s38(fout_s12()
+         ,T842
+         ,T845) -> u_s38_s39(fin_s0(T842
+                                   ,T845)
+                            ,T842
+                            ,T845)
+u_s38_s39(fout_s0()
+         ,T842
+         ,T845) -> fout_s36()
+)

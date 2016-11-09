@@ -1,0 +1,8 @@
+(VAR T18 T19 T20)
+(RULES
+fin_s0([]()) -> fout_s0(Left0())
+fin_s0(:(T18,T19)) ->
+  u_s0_s5(fin_s0(T19),:(T18,T19))
+u_s0_s5(fout_s0(T20)
+       ,:(T18,T19)) -> fout_s0(s(T20))
+)

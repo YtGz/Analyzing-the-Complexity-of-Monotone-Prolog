@@ -1,0 +1,19 @@
+(VAR T31 T2 T53 T54)
+(RULES
+fin_s0([]()) -> fout_s0_0()
+fin_s0([]()) -> fout_s0_0()
+fin_s0(T31) -> fout_s0_0()
+fin_s0(T31) ->
+  u_s0_s10(fin_s10(T31),T31)
+u_s0_s10(fout_s10_0(),T31) ->
+  fout_s0_0()
+fin_s0(T2) ->
+  u_s0_s9(fin_s10(T2),T2)
+u_s0_s9(fout_s10_0(),T2) ->
+  fout_s0_0()
+fin_s10(:(T53,T54)) ->
+  u_s10_s11(fin_s0(T54)
+           ,:(T53,T54))
+u_s10_s11(fout_s0_0()
+         ,:(T53,T54)) -> fout_s10_0()
+)

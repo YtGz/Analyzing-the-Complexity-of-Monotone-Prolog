@@ -1,0 +1,29 @@
+(VAR T12 T13 T44 T45)
+(RULES
+fin_s0(T12,T13) ->
+  u_s0_s2(fin_s2(T12,T13),T12,T13)
+u_s0_s2(fout_s2(),T12,T13) ->
+  fout_s0()
+fin_s4(a(),Left0()) -> fout_s4()
+fin_s4(T44,s(T45)) ->
+  u_s4_s10(fin_s4(T44,T45)
+          ,T44
+          ,s(T45))
+u_s4_s10(fout_s4()
+        ,T44
+        ,s(T45)) -> fout_s4()
+fin_s5(b()) ->
+  u_s5_s13(fin_s13(),b())
+u_s5_s13(fout_s13(),b()) ->
+  fout_s5()
+fin_s13() ->
+  u_s13_s16(fin_s13())
+u_s13_s16(fout_s13()) ->
+  fout_s13()
+fin_s2(T12,T13) ->
+  u_s2_s4(fin_s4(T12,T13),T12,T13)
+u_s2_s4(fout_s4(),T12,T13) ->
+  u_s4_s5(fin_s5(T12),T12,T13)
+u_s4_s5(fout_s5(),T12,T13) ->
+  fout_s2()
+)

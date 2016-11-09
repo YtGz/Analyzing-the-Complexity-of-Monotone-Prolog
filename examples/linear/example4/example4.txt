@@ -1,0 +1,7 @@
+(VAR T5)
+(RULES
+fin_s0(f(T5)) ->
+  u_s0_s2(fin_s0(T5),f(T5))
+u_s0_s2(fout_s0_0(),f(T5)) ->
+  fout_s0_0()
+)

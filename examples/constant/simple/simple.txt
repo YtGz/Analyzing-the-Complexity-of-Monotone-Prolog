@@ -1,0 +1,13 @@
+(VAR T6 T0 T1 T30)
+(RULES
+fin_s0(T6) -> fout_s0_0(g(T6))
+fin_s0(T6) -> u_s0_s4(fin_s4(T6)
+                     ,T6)
+u_s0_s4(fout_s4_0(T0),T6) ->
+  fout_s0_0(T0)
+fin_s0(T1) -> u_s0_s3(fin_s4(T1)
+                     ,T1)
+u_s0_s3(fout_s4_0(T0),T1) ->
+  fout_s0_0(T0)
+fin_s4(T30) -> fout_s4_0(f(T30))
+)

@@ -1,0 +1,8 @@
+(VAR T49)
+(RULES
+fin_s0(Left0()) -> fout_s0_0()
+fin_s0(s(T49)) ->
+  u_s0_s8(fin_s0(T49),s(T49))
+u_s0_s8(fout_s0_0(),s(T49)) ->
+  fout_s0_0()
+)

@@ -1,0 +1,29 @@
+(VAR T42 T43 T45 T44 T132 T148 T149 T153 T151 T82 T83)
+(RULES
+fin_s0([]()) -> fout_s0([]())
+fin_s0(:(T42,T43)) ->
+  u_s0_s5(fin_s5(T43,T42)
+         ,:(T42,T43))
+u_s0_s5(fout_s5(T45,T44)
+       ,:(T42,T43)) -> fout_s0(T44)
+fin_s8([](),T132) ->
+  fout_s8(:(T132,[]()))
+fin_s8(:(T148,T149),T153) ->
+  u_s8_s13(fin_s8(T149,T153)
+          ,:(T148,T149)
+          ,T153)
+u_s8_s13(fout_s8(T151)
+        ,:(T148,T149)
+        ,T153) -> fout_s8(:(T148,T151))
+fin_s5(T43,T42) ->
+  u_s5_s7(fin_s0(T43),T43,T42)
+u_s5_s7(fout_s0(T82),T43,T42) ->
+  u_s7_s8(fin_s8(T82,T42)
+         ,T43
+         ,T42
+         ,T82)
+u_s7_s8(fout_s8(T83)
+       ,T43
+       ,T42
+       ,T82) -> fout_s5(T82,T83)
+)

@@ -1,0 +1,10 @@
+cause:
+	wrong graph:
+	no parallel rule is used
+
+assumption:
+	either head(n) (i.e. insert) or clause 3:
+
+insert(X, tree(Y, Left, Right), tree(Y, Left1, Right)) :- ','(less(X, Y), insert(X, Left, Left1)).
+
+	should be recursive?

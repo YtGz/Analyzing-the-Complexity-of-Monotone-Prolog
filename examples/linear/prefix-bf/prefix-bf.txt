@@ -1,0 +1,12 @@
+(VAR T25 T73 T74)
+(RULES
+fin_s0(T25) ->
+  u_s0_s2(fin_s2(T25),T25)
+u_s0_s2(fout_s2(),T25) ->
+  fout_s0()
+fin_s2([]()) -> fout_s2()
+fin_s2(:(T73,T74)) ->
+  u_s2_s8(fin_s2(T74),:(T73,T74))
+u_s2_s8(fout_s2(),:(T73,T74)) ->
+  fout_s2()
+)

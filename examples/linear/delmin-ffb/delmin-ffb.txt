@@ -1,0 +1,9 @@
+(VAR T18 T41 T45 T43)
+(RULES
+fin_s0(T18) -> fout_s0()
+fin_s0(tree(T41,T45,T43)) ->
+  u_s0_s5(fin_s0(T45)
+         ,tree(T41,T45,T43))
+u_s0_s5(fout_s0()
+       ,tree(T41,T45,T43)) -> fout_s0()
+)

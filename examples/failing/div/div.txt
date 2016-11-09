@@ -1,0 +1,128 @@
+(VAR T54 T55 T56 T134 T135 T226 T227 T229 T228 T168 T169 T188 T292 T293 T294 T320 T114 T258 T259 P)
+(RULES
+fin_s0(T54,s(T55)) ->
+  u_s0_s2(fin_s2(T54,T55)
+         ,T54
+         ,s(T55))
+u_s0_s2(fout_s2_0(T56)
+       ,T54
+       ,s(T55)) -> fout_s0_0(T56)
+fin_s9(s(T134),T135) ->
+  u_s9_s11(fin_s11(T134,T135)
+          ,s(T134)
+          ,T135)
+u_s9_s11(fout_s11_0()
+        ,s(T134)
+        ,T135) -> fout_s9_0(Left0())
+fin_s10(s(T226),T227) ->
+  u_s10_s20(fin_s20(T226,T227)
+           ,s(T226)
+           ,T227)
+u_s10_s20(fout_s20_0(T229,T228)
+         ,s(T226)
+         ,T227) -> fout_s10_0(s(T228))
+fin_s14(s(T168),s(T169)) ->
+  u_s14_s16(fin_s11(T168,T169)
+           ,s(T168)
+           ,s(T169))
+u_s14_s16(fout_s11_0()
+         ,s(T168)
+         ,s(T169)) -> fout_s14_0()
+fin_s15(Left0(),s(T188)) ->
+  fout_s15_0()
+fin_s11(T134,T135) ->
+  u_s11_s13(fin_s13(T134,T135)
+           ,T134
+           ,T135)
+u_s11_s13(fout_s13_0()
+         ,T134
+         ,T135) -> fout_s11_0()
+u_s11_s13(fout_s13_1()
+         ,T134
+         ,T135) -> fout_s11_0()
+fin_s22(T226,T227) ->
+  u_s22_s24(fin_s24(T226,T227)
+           ,T226
+           ,T227)
+u_s22_s24(fout_s24_0(T229)
+         ,T226
+         ,T227) -> fout_s22_0(T229)
+u_s22_s24(fout_s24_1(T229)
+         ,T226
+         ,T227) -> fout_s22_0(T229)
+fin_s25(s(T292),s(T293)) ->
+  u_s25_s27(fin_s22(T292,T293)
+           ,s(T292)
+           ,s(T293))
+u_s25_s27(fout_s22_0(T294)
+         ,s(T292)
+         ,s(T293)) -> fout_s25_0(T294)
+fin_s26(T320,Left0()) ->
+  fout_s26_0(T320)
+fin_s2(Left0(),T114) ->
+  fout_s2_0(Left0())
+fin_s2(T54,T55) ->
+  u_s2_s6(fin_s6(T54,T55),T54,T55)
+u_s2_s6(fout_s6_0(T56)
+       ,T54
+       ,T55) -> fout_s2_0(T56)
+u_s2_s6(fout_s6_1(T56)
+       ,T54
+       ,T55) -> fout_s2_0(T56)
+fin_s20(T226,T227) ->
+  u_s20_s22(fin_s22(T226,T227)
+           ,T226
+           ,T227)
+u_s20_s22(fout_s22_0(T258)
+         ,T226
+         ,T227) -> u_s22_s23(fin_s2(T258
+                                   ,T227)
+                            ,T226
+                            ,T227
+                            ,T258)
+u_s22_s23(fout_s2_0(T259)
+         ,T226
+         ,T227
+         ,T258) -> fout_s20_0(T258,T259)
+fin_s6(T54,T55) ->
+  u_s6_s9_u_s6_s10(fin_s9(T54,T55)
+                  ,fin_s10(T54,T55)
+                  ,T54
+                  ,T55)
+u_s6_s9_u_s6_s10(fout_s9_0(T56)
+                ,P
+                ,T54
+                ,T55) -> fout_s6_0(T56)
+u_s6_s9_u_s6_s10(P
+                ,fout_s10_0(T56)
+                ,T54
+                ,T55) -> fout_s6_1(T56)
+fin_s13(T134,T135) ->
+  u_s13_s14_u_s13_s15(fin_s14(T134
+                             ,T135)
+                     ,fin_s15(T134,T135)
+                     ,T134
+                     ,T135)
+u_s13_s14_u_s13_s15(fout_s14_0()
+                   ,P
+                   ,T134
+                   ,T135) -> fout_s13_0()
+u_s13_s14_u_s13_s15(P
+                   ,fout_s15_0()
+                   ,T134
+                   ,T135) -> fout_s13_1()
+fin_s24(T226,T227) ->
+  u_s24_s25_u_s24_s26(fin_s25(T226
+                             ,T227)
+                     ,fin_s26(T226,T227)
+                     ,T226
+                     ,T227)
+u_s24_s25_u_s24_s26(fout_s25_0(T229)
+                   ,P
+                   ,T226
+                   ,T227) -> fout_s24_0(T229)
+u_s24_s25_u_s24_s26(P
+                   ,fout_s26_0(T229)
+                   ,T226
+                   ,T227) -> fout_s24_1(T229)
+)

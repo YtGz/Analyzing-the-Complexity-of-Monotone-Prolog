@@ -1,0 +1,77 @@
+(VAR T46 T48 T49 T47 T82 T81 T83 T124 T127 T125 T126 T158 T206 T207 T208 T209 T240 P)
+(RULES
+fin_s0(T46) ->
+  u_s0_s2(fin_s2(T46),T46)
+u_s0_s2(fout_s2_0(T48,T49,T47)
+       ,T46) -> fout_s0_0(T47)
+fin_s4(T46) ->
+  u_s4_s6(fin_s6(T46),T46)
+u_s4_s6(fout_s6_0(T48,T49)
+       ,T46) -> fout_s4_0(T48,T49)
+u_s4_s6(fout_s6_1(T48,T49)
+       ,T46) -> fout_s4_0(T48,T49)
+fin_s5(T82,T81) ->
+  u_s5_s13(fin_s13(T82,T81)
+          ,T82
+          ,T81)
+u_s5_s13(fout_s13_0(T83)
+        ,T82
+        ,T81) -> fout_s5_0(T83)
+u_s5_s13(fout_s13_1(T83)
+        ,T82
+        ,T81) -> fout_s5_0(T83)
+fin_s7(:(T124,T127)) ->
+  u_s7_s9(fin_s4(T127)
+         ,:(T124,T127))
+u_s7_s9(fout_s4_0(T125,T126)
+       ,:(T124,T127)) ->
+  fout_s7_0(:(T124,T125),T126)
+fin_s8(T158) -> fout_s8_0([]()
+                         ,T158)
+fin_s14(:(T206,T207),T208) ->
+  u_s14_s16(fin_s5(T207,T208)
+           ,:(T206,T207)
+           ,T208)
+u_s14_s16(fout_s5_0(T209)
+         ,:(T206,T207)
+         ,T208) -> fout_s14_0(:(T206
+                               ,T209))
+fin_s15([](),T240) ->
+  fout_s15_0(T240)
+fin_s2(T46) ->
+  u_s2_s4(fin_s4(T46),T46)
+u_s2_s4(fout_s4_0(T81,T82)
+       ,T46) -> u_s4_s5(fin_s5(T82,T81)
+                       ,T46
+                       ,T81
+                       ,T82)
+u_s4_s5(fout_s5_0(T83)
+       ,T46
+       ,T81
+       ,T82) -> fout_s2_0(T81,T82,T83)
+fin_s6(T46) ->
+  u_s6_s7_u_s6_s8(fin_s7(T46)
+                 ,fin_s8(T46)
+                 ,T46)
+u_s6_s7_u_s6_s8(fout_s7_0(T48
+                         ,T49)
+               ,P
+               ,T46) -> fout_s6_0(T48,T49)
+u_s6_s7_u_s6_s8(P
+               ,fout_s8_0(T48,T49)
+               ,T46) -> fout_s6_1(T48,T49)
+fin_s13(T82,T81) ->
+  u_s13_s14_u_s13_s15(fin_s14(T82
+                             ,T81)
+                     ,fin_s15(T82,T81)
+                     ,T82
+                     ,T81)
+u_s13_s14_u_s13_s15(fout_s14_0(T83)
+                   ,P
+                   ,T82
+                   ,T81) -> fout_s13_0(T83)
+u_s13_s14_u_s13_s15(P
+                   ,fout_s15_0(T83)
+                   ,T82
+                   ,T81) -> fout_s13_1(T83)
+)

@@ -1,0 +1,11 @@
+(VAR T12 T13 T72 T73 T74)
+(RULES
+fin_s0(tree(T12,void(),T13)) ->
+  fout_s0(T12)
+fin_s0(tree(T72,T73,T72)) ->
+  u_s0_s9(fin_s0(T73)
+         ,tree(T72,T73,T72))
+u_s0_s9(fout_s0(T74)
+       ,tree(T72,T73,T72)) ->
+  fout_s0(T74)
+)

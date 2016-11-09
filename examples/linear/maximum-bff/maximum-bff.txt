@@ -1,0 +1,26 @@
+(VAR T31 T32 T117 T53 T66 T65 T92 T91 T151)
+(RULES
+fin_s0(T31) ->
+  u_s0_s4(fin_s4(T31),T31)
+u_s0_s4(fout_s4(T32),T31) ->
+  fout_s0()
+fin_s0(T117) ->
+  u_s0_s14(fin_s14(T117),T117)
+u_s0_s14(fout_s14(),T117) ->
+  fout_s0()
+fin_s4(s(T53)) ->
+  fout_s4(Left0())
+fin_s4(s(T66)) ->
+  u_s4_s10(fin_s4(T66),s(T66))
+u_s4_s10(fout_s4(T65),s(T66)) ->
+  fout_s4(s(T65))
+fin_s4(s(T92)) ->
+  u_s4_s12(fin_s4(T92),s(T92))
+u_s4_s12(fout_s4(T91),s(T92)) ->
+  fout_s4(s(T91))
+fin_s14(Left0()) -> fout_s14()
+fin_s14(s(T151)) ->
+  u_s14_s20(fin_s14(T151),s(T151))
+u_s14_s20(fout_s14(),s(T151)) ->
+  fout_s14()
+)

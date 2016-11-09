@@ -1,0 +1,8 @@
+(VAR T31 T32)
+(RULES
+fin_s0([]()) -> fout_s0()
+fin_s0(:(T31,T32)) ->
+  u_s0_s5(fin_s0(T32),:(T31,T32))
+u_s0_s5(fout_s0(),:(T31,T32)) ->
+  fout_s0()
+)

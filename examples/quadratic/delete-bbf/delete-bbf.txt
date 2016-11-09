@@ -1,0 +1,241 @@
+(VAR T80 T81 T90 T128 T337 T638 T859 T861 T1198 T1200 T1477 T1479 T1672 T1673 T1710 T1711 T1921 T1922 T2200 T2201 T2423 T2424 T2425 T2633 T2634 T2635 T2636 T2944 T2945 T2946 T2947 T383 T903 T904 T927 T929 T987 T988 T989 T2675 T2687 T2688)
+(RULES
+fin_s0(T80
+      ,tree(T80,void(),T81)) ->
+  fout_s0()
+fin_s0(T90
+      ,tree(T90,void(),void())) ->
+  fout_s0()
+fin_s0(T128
+      ,tree(T128,void(),void())) ->
+  u_s0_s10(fin_s10()
+          ,T128
+          ,tree(T128,void(),void()))
+u_s0_s10(fout_s10()
+        ,T128
+        ,tree(T128,void(),void())) ->
+  fout_s0()
+fin_s0(T337
+      ,tree(T337,void(),void())) ->
+  u_s0_s16(fin_s16(T337)
+          ,T337
+          ,tree(T337,void(),void()))
+u_s0_s16(fout_s16()
+        ,T337
+        ,tree(T337,void(),void())) ->
+  fout_s0()
+fin_s0(T638
+      ,tree(T638,void(),void())) ->
+  u_s0_s24(fin_s24(T638)
+          ,T638
+          ,tree(T638,void(),void()))
+u_s0_s24(fout_s24()
+        ,T638
+        ,tree(T638,void(),void())) ->
+  fout_s0()
+fin_s0(T859
+      ,tree(T859,void(),T861)) ->
+  u_s0_s30(fin_s30(T861)
+          ,T859
+          ,tree(T859,void(),T861))
+u_s0_s30(fout_s30()
+        ,T859
+        ,tree(T859,void(),T861)) ->
+  fout_s0()
+fin_s0(T1198
+      ,tree(T1198,void(),T1200)) ->
+  u_s0_s42(fin_s42(T1198)
+          ,T1198
+          ,tree(T1198,void(),T1200))
+u_s0_s42(fout_s42()
+        ,T1198
+        ,tree(T1198,void(),T1200)) ->
+  fout_s0()
+fin_s0(T1477
+      ,tree(T1477,void(),T1479)) ->
+  u_s0_s46(fin_s46(T1477,T1479)
+          ,T1477
+          ,tree(T1477,void(),T1479))
+u_s0_s46(fout_s46()
+        ,T1477
+        ,tree(T1477,void(),T1479)) ->
+  fout_s0()
+fin_s0(T1672
+      ,tree(T1672,T1673,void())) ->
+  fout_s0()
+fin_s0(T1710
+      ,tree(T1710,T1711,void())) ->
+  u_s0_s55(fin_s10()
+          ,T1710
+          ,tree(T1710,T1711,void()))
+u_s0_s55(fout_s10()
+        ,T1710
+        ,tree(T1710,T1711,void())) ->
+  fout_s0()
+fin_s0(T1921
+      ,tree(T1921,T1922,void())) ->
+  u_s0_s59(fin_s59(T1921,T1922)
+          ,T1921
+          ,tree(T1921,T1922,void()))
+u_s0_s59(fout_s59()
+        ,T1921
+        ,tree(T1921,T1922,void())) ->
+  fout_s0()
+fin_s0(T2200
+      ,tree(T2200,T2201,void())) ->
+  u_s0_s63(fin_s63(T2200)
+          ,T2200
+          ,tree(T2200,T2201,void()))
+u_s0_s63(fout_s63()
+        ,T2200
+        ,tree(T2200,T2201,void())) ->
+  fout_s0()
+fin_s0(T2423
+      ,tree(T2423,T2424,T2425)) ->
+  u_s0_s69(fin_s30(T2425)
+          ,T2423
+          ,tree(T2423,T2424,T2425))
+u_s0_s69(fout_s30()
+        ,T2423
+        ,tree(T2423,T2424,T2425)) ->
+  fout_s0()
+fin_s0(T2633
+      ,tree(T2634,T2635,T2636)) ->
+  u_s0_s73(fin_s73(T2633
+                  ,T2634
+                  ,T2635)
+          ,T2633
+          ,tree(T2634,T2635,T2636))
+u_s0_s73(fout_s73()
+        ,T2633
+        ,tree(T2634,T2635,T2636)) ->
+  fout_s0()
+fin_s0(T2944
+      ,tree(T2945,T2946,T2947)) ->
+  u_s0_s83(fin_s83(T2945
+                  ,T2944
+                  ,T2947)
+          ,T2944
+          ,tree(T2945,T2946,T2947))
+u_s0_s83(fout_s83()
+        ,T2944
+        ,tree(T2945,T2946,T2947)) ->
+  fout_s0()
+fin_s18(s(T383)) ->
+  u_s18_s22(fin_s18(T383),s(T383))
+u_s18_s22(fout_s18(),s(T383)) ->
+  fout_s18()
+fin_s30(tree(T903
+            ,void()
+            ,T904)) -> fout_s30()
+fin_s30(tree(T927
+            ,void()
+            ,T929)) -> u_s30_s36(fin_s10()
+                                ,tree(T927,void(),T929))
+u_s30_s36(fout_s10()
+         ,tree(T927,void(),T929)) ->
+  fout_s30()
+fin_s30(tree(T987,T988,T989)) ->
+  u_s30_s38(fin_s30(T988)
+           ,tree(T987,T988,T989))
+u_s30_s38(fout_s30()
+         ,tree(T987,T988,T989)) ->
+  fout_s30()
+fin_s75(Left0(),s(T2675)) ->
+  fout_s75()
+fin_s75(s(T2687),s(T2688)) ->
+  u_s75_s81(fin_s75(T2687,T2688)
+           ,s(T2687)
+           ,s(T2688))
+u_s75_s81(fout_s75()
+         ,s(T2687)
+         ,s(T2688)) -> fout_s75()
+fin_s16(T337) ->
+  u_s16_s18(fin_s18(T337),T337)
+u_s16_s18(fout_s18(),T337) ->
+  u_s18_s19(fin_s0(T337,void())
+           ,T337)
+u_s18_s19(fout_s0(),T337) ->
+  fout_s16()
+fin_s24(T638) ->
+  u_s24_s26(fin_s18(T638),T638)
+u_s24_s26(fout_s18(),T638) ->
+  u_s26_s27(fin_s0(T638,void())
+           ,T638)
+u_s26_s27(fout_s0(),T638) ->
+  fout_s24()
+fin_s42(T1198) ->
+  u_s42_s44(fin_s18(T1198),T1198)
+u_s42_s44(fout_s18(),T1198) ->
+  u_s44_s45(fin_s0(T1198,void())
+           ,T1198)
+u_s44_s45(fout_s0(),T1198) ->
+  fout_s42()
+fin_s46(T1477,T1479) ->
+  u_s46_s48(fin_s18(T1477)
+           ,T1477
+           ,T1479)
+u_s46_s48(fout_s18()
+         ,T1477
+         ,T1479) ->
+  u_s48_s49(fin_s0(T1477,T1479)
+           ,T1477
+           ,T1479)
+u_s48_s49(fout_s0()
+         ,T1477
+         ,T1479) -> fout_s46()
+fin_s59(T1921,T1922) ->
+  u_s59_s61(fin_s18(T1921)
+           ,T1921
+           ,T1922)
+u_s59_s61(fout_s18()
+         ,T1921
+         ,T1922) ->
+  u_s61_s62(fin_s0(T1921,T1922)
+           ,T1921
+           ,T1922)
+u_s61_s62(fout_s0()
+         ,T1921
+         ,T1922) -> fout_s59()
+fin_s63(T2200) ->
+  u_s63_s65(fin_s18(T2200),T2200)
+u_s63_s65(fout_s18(),T2200) ->
+  u_s65_s66(fin_s0(T2200,void())
+           ,T2200)
+u_s65_s66(fout_s0(),T2200) ->
+  fout_s63()
+fin_s73(T2633,T2634,T2635) ->
+  u_s73_s75(fin_s75(T2633,T2634)
+           ,T2633
+           ,T2634
+           ,T2635)
+u_s73_s75(fout_s75()
+         ,T2633
+         ,T2634
+         ,T2635) ->
+  u_s75_s76(fin_s0(T2633,T2635)
+           ,T2633
+           ,T2634
+           ,T2635)
+u_s75_s76(fout_s0()
+         ,T2633
+         ,T2634
+         ,T2635) -> fout_s73()
+fin_s83(T2945,T2944,T2947) ->
+  u_s83_s85(fin_s75(T2945,T2944)
+           ,T2945
+           ,T2944
+           ,T2947)
+u_s83_s85(fout_s75()
+         ,T2945
+         ,T2944
+         ,T2947) ->
+  u_s85_s86(fin_s0(T2944,T2947)
+           ,T2945
+           ,T2944
+           ,T2947)
+u_s85_s86(fout_s0()
+         ,T2945
+         ,T2944
+         ,T2947) -> fout_s83()
+)

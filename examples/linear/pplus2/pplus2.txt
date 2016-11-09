@@ -1,0 +1,30 @@
+(VAR T39 T83)
+(RULES
+fin_s0(Left0()) -> fout_s0_0()
+fin_s0(Left0()) ->
+  u_s0_s4(fin_s4(),Left0())
+u_s0_s4(fout_s4_0(),Left0()) ->
+  fout_s0_0()
+fin_s0(s(T39)) ->
+  u_s0_s5(fin_s5(T39),s(T39))
+u_s0_s5(fout_s5_0(),s(T39)) ->
+  fout_s0_0()
+fin_s7(Left0()) -> fout_s7_0()
+fin_s7(s(T83)) ->
+  u_s7_s13(fin_s7(T83),s(T83))
+u_s7_s13(fout_s7_0(),s(T83)) ->
+  fout_s7_0()
+fin_s8() -> fout_s8_0()
+fin_s8() -> u_s8_s18(fin_s4())
+u_s8_s18(fout_s4_0()) ->
+  fout_s8_0()
+fin_s8() -> u_s8_s17(fin_s4())
+u_s8_s17(fout_s4_0()) ->
+  fout_s8_0()
+fin_s5(T39) ->
+  u_s5_s7(fin_s7(T39),T39)
+u_s5_s7(fout_s7_0(),T39) ->
+  u_s7_s8(fin_s8(),T39)
+u_s7_s8(fout_s8_0(),T39) ->
+  fout_s5_0()
+)

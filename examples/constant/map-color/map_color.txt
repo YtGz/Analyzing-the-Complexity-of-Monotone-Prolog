@@ -1,0 +1,4 @@
+(VAR)
+(RULES
+fin_s0() -> fout_s0()
+)

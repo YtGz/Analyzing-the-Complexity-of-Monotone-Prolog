@@ -1,0 +1,15 @@
+(VAR T37)
+(RULES
+fin_s0(Left0()) -> fout_s0_0()
+fin_s0(s(s(Left0()))) ->
+  fout_s0_0()
+fin_s0(s(s(s(s(Left0()))))) ->
+  fout_s0_0()
+fin_s0(s(s(s(s(Left0()))))) ->
+  fout_s0_0()
+fin_s0(s(s(s(s(T37))))) ->
+  u_s0_s22(fin_s0(s(s(T37)))
+          ,s(s(s(s(T37)))))
+u_s0_s22(fout_s0_0()
+        ,s(s(s(s(T37))))) -> fout_s0_0()
+)

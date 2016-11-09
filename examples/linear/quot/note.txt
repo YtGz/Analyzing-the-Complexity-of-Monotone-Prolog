@@ -1,0 +1,1 @@
+TcT yields a timeout. To obtain the bound use AProVE and change parameters of the heuristic.

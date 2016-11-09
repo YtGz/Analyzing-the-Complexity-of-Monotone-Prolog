@@ -1,0 +1,15 @@
+(VAR)
+(RULES
+fin_s0(:(a()
+        ,:(book(),:(falls(),[]())))) ->
+  fout_s0_0(s(s(),book(),fall()))
+fin_s0(:(a()
+        ,:(book(),:(flies(),[]())))) ->
+  fout_s0_0(s(s(),book(),fly()))
+fin_s0(:(a()
+        ,:(box(),:(falls(),[]())))) ->
+  fout_s0_0(s(s(),box(),fall()))
+fin_s0(:(a()
+        ,:(box(),:(flies(),[]())))) ->
+  fout_s0_0(s(s(),box(),fly()))
+)

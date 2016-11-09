@@ -1,0 +1,15 @@
+(VAR T16 T32 T33 T34 T35)
+(RULES
+fin_s0(nil()) ->
+  fout_s0_0(nil())
+fin_s0(cons(nil(),T16)) ->
+  fout_s0_0(cons(nil(),T16))
+fin_s0(cons(cons(T32,T33)
+           ,T34)) ->
+  u_s0_s9(fin_s0(cons(T32
+                     ,cons(T33,T34)))
+         ,cons(cons(T32,T33),T34))
+u_s0_s9(fout_s0_0(T35)
+       ,cons(cons(T32,T33),T34)) ->
+  fout_s0_0(T35)
+)

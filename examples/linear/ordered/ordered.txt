@@ -1,0 +1,45 @@
+(VAR T14 T35 T36 T37 T67 T79 T80 T99 T111 T112)
+(RULES
+fin_s0([]()) -> fout_s0()
+fin_s0(:(T14,[]())) -> fout_s0()
+fin_s0(:(T35,:(T36,T37))) ->
+  u_s0_s9(fin_s9(T35,T36,T37)
+         ,:(T35,:(T36,T37)))
+u_s0_s9(fout_s9()
+       ,:(T35,:(T36,T37))) -> fout_s0()
+fin_s11(Left0(),T67) ->
+  fout_s11()
+fin_s11(s(T79),T80) ->
+  u_s11_s17(fin_s17(T79,T80)
+           ,s(T79)
+           ,T80)
+u_s11_s17(fout_s17()
+         ,s(T79)
+         ,T80) -> fout_s11()
+fin_s17(Left0(),s(T99)) ->
+  fout_s17()
+fin_s17(s(T111),s(T112)) ->
+  u_s17_s23(fin_s17(T111,T112)
+           ,s(T111)
+           ,s(T112))
+u_s17_s23(fout_s17()
+         ,s(T111)
+         ,s(T112)) -> fout_s17()
+fin_s9(T35,T36,T37) ->
+  u_s9_s11(fin_s11(T35,T36)
+          ,T35
+          ,T36
+          ,T37)
+u_s9_s11(fout_s11()
+        ,T35
+        ,T36
+        ,T37) -> u_s11_s12(fin_s0(:(T36
+                                   ,T37))
+                          ,T35
+                          ,T36
+                          ,T37)
+u_s11_s12(fout_s0()
+         ,T35
+         ,T36
+         ,T37) -> fout_s9()
+)

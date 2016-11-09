@@ -1,0 +1,10 @@
+(VAR T15 T16 T38 T39 T37 T40)
+(RULES
+fin_s0(:(T15,T16)) ->
+  fout_s0(T15,T16)
+fin_s0(:(T38,T39)) ->
+  u_s0_s5(fin_s0(T39),:(T38,T39))
+u_s0_s5(fout_s0(T37,T40)
+       ,:(T38,T39)) -> fout_s0(T37
+                              ,:(T38,T40))
+)

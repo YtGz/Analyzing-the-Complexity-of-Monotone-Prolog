@@ -1,0 +1,45 @@
+(VAR T11 T35 T171 T87 T109 T53 P)
+(RULES
+fin_s0(T11) -> fout_s0_0()
+fin_s0(f(T35)) ->
+  u_s0_s5(fin_s5(T35),f(T35))
+u_s0_s5(fout_s5_0(),f(T35)) ->
+  fout_s0_0()
+fin_s0(f(T171)) ->
+  u_s0_s21(fin_s21(T171),f(T171))
+u_s0_s21(fout_s21_0()
+        ,f(T171)) -> fout_s0_0()
+u_s0_s21(fout_s21_1()
+        ,f(T171)) -> fout_s0_0()
+fin_s10(g(T87)) -> fout_s10_0()
+fin_s10(f(T109)) ->
+  u_s10_s16(fin_s5(T109),f(T109))
+u_s10_s16(fout_s5_0()
+         ,f(T109)) -> fout_s10_0()
+fin_s5(T53) ->
+  u_s5_s8(fin_s8(T53),T53)
+u_s5_s8(fout_s8_0(),T53) ->
+  fout_s5_0()
+u_s5_s8(fout_s8_1(),T53) ->
+  fout_s5_0()
+fin_s8(T53) ->
+  u_s8_s10_u_s8_s11(fin_s10(T53)
+                   ,fin_s11(T53)
+                   ,T53)
+u_s8_s10_u_s8_s11(fout_s10_0()
+                 ,P
+                 ,T53) -> fout_s8_0()
+u_s8_s10_u_s8_s11(P
+                 ,fout_s11_0()
+                 ,T53) -> fout_s8_1()
+fin_s21(T171) ->
+  u_s21_s23_u_s21_s24(fin_s10(T171)
+                     ,fin_s24(T171)
+                     ,T171)
+u_s21_s23_u_s21_s24(fout_s10_0()
+                   ,P
+                   ,T171) -> fout_s21_0()
+u_s21_s23_u_s21_s24(P
+                   ,fout_s24_0()
+                   ,T171) -> fout_s21_1()
+)

@@ -1,0 +1,1 @@
+TcT yields timeout. The linear bound of the TRS can be shown using AProVE instead.

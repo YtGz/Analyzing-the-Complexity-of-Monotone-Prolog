@@ -1,0 +1,35 @@
+(VAR T1 T0 T27 T84 P)
+(RULES
+fin_s0(T1) -> u_s0_s1(fin_s1(T1)
+                     ,T1)
+u_s0_s1(fout_s1_0(T0),T1) ->
+  fout_s0_0(T0)
+u_s0_s1(fout_s1_1(T0),T1) ->
+  fout_s0_0(T0)
+fin_s2(a()) -> u_s2_s9(fin_s9()
+                      ,a())
+u_s2_s9(fout_s9_0(T27),a()) ->
+  fout_s2_0(T27)
+u_s2_s9(fout_s9_1(T27),a()) ->
+  fout_s2_0(T27)
+fin_s3(T84) -> fout_s3_0(T84)
+fin_s11() -> fout_s11_0(b())
+fin_s1(T1) ->
+  u_s1_s2_u_s1_s3(fin_s2(T1)
+                 ,fin_s3(T1)
+                 ,T1)
+u_s1_s2_u_s1_s3(fout_s2_0(T0)
+               ,P
+               ,T1) -> fout_s1_0(T0)
+u_s1_s2_u_s1_s3(P
+               ,fout_s3_0(T0)
+               ,T1) -> fout_s1_1(T0)
+fin_s9() ->
+  u_s9_s10_u_s9_s11(fin_s10()
+                   ,fin_s11())
+u_s9_s10_u_s9_s11(fout_s10_0(T27)
+                 ,P) -> fout_s9_0(T27)
+u_s9_s10_u_s9_s11(P
+                 ,fout_s11_0(T27)) ->
+  fout_s9_1(T27)
+)

@@ -1,0 +1,35 @@
+(VAR T1 T0 T60 T61 T122 T123 T124 T125 P)
+(RULES
+fin_s0(empty()) ->
+  fout_s0_0(Left0())
+fin_s0(T1) -> u_s0_s3(fin_s3(T1)
+                     ,T1)
+u_s0_s3(fout_s3_0(T0),T1) ->
+  fout_s0_0(T0)
+u_s0_s3(fout_s3_1(T0),T1) ->
+  fout_s0_0(T0)
+fin_s6(push(nil(),T60)) ->
+  u_s6_s8(fin_s0(T60)
+         ,push(nil(),T60))
+u_s6_s8(fout_s0_0(T61)
+       ,push(nil(),T60)) ->
+  fout_s6_0(T61)
+fin_s7(push(cons(T122,T123)
+           ,T124)) ->
+  u_s7_s10(fin_s0(push(T122
+                      ,push(T123,T124)))
+          ,push(cons(T122,T123),T124))
+u_s7_s10(fout_s0_0(T125)
+        ,push(cons(T122,T123),T124)) ->
+  fout_s7_0(s(T125))
+fin_s3(T1) ->
+  u_s3_s6_u_s3_s7(fin_s6(T1)
+                 ,fin_s7(T1)
+                 ,T1)
+u_s3_s6_u_s3_s7(fout_s6_0(T0)
+               ,P
+               ,T1) -> fout_s3_0(T0)
+u_s3_s6_u_s3_s7(P
+               ,fout_s7_0(T0)
+               ,T1) -> fout_s3_1(T0)
+)

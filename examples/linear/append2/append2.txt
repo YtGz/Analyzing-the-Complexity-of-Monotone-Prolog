@@ -1,0 +1,19 @@
+(VAR T13 T14 T15 T0 T2 T1 T31 T34 T32 T33)
+(RULES
+fin_s0(T13) -> fout_s0_0([]()
+                        ,T13)
+fin_s0(T13) ->
+  u_s0_s4(fin_s4(T13),T13)
+u_s0_s4(fout_s4_0(T14,T15)
+       ,T13) -> fout_s0_0(T14,T15)
+fin_s0(T0) -> u_s0_s3(fin_s4(T0)
+                     ,T0)
+u_s0_s3(fout_s4_0(T2,T1),T0) ->
+  fout_s0_0(T2,T1)
+fin_s4(:(T31,T34)) ->
+  u_s4_s5(fin_s0(T34),:(T31,T34))
+u_s4_s5(fout_s0_0(T32,T33)
+       ,:(T31,T34)) -> fout_s4_0(:(T31
+                                  ,T32)
+                                ,T33)
+)

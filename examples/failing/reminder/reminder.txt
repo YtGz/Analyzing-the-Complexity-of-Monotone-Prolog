@@ -1,0 +1,172 @@
+(VAR T2 T1 T0 T93 T108 T96 T95 T299 T310 T164 T165 T166 T208 T209 T210 T236 T338 T339 T370 T371 T390 T130 T131 P)
+(RULES
+fin_s0(T2,T1) ->
+  u_s0_s1(fin_s1(T2,T1),T2,T1)
+u_s0_s1(fout_s1_0(T0),T2,T1) ->
+  fout_s0_0(T0)
+u_s0_s1(fout_s1_1(T0),T2,T1) ->
+  fout_s0_0(T0)
+fin_s2(T93,s(T108)) ->
+  u_s2_s7(fin_s7(T93,T108)
+         ,T93
+         ,s(T108))
+u_s2_s7(fout_s7_0(T96,T95)
+       ,T93
+       ,s(T108)) -> fout_s2_0(T95)
+fin_s3(T299,s(T310)) ->
+  u_s3_s28(fin_s28(T299,T310)
+          ,T299
+          ,s(T310))
+u_s3_s28(fout_s28_0()
+        ,T299
+        ,s(T310)) -> fout_s3_0(T299)
+u_s3_s28(fout_s28_1()
+        ,T299
+        ,s(T310)) -> fout_s3_0(T299)
+fin_s9(T93,T108) ->
+  u_s9_s11(fin_s11(T93,T108)
+          ,T93
+          ,T108)
+u_s9_s11(fout_s11_0(T96)
+        ,T93
+        ,T108) -> fout_s9_0(T96)
+u_s9_s11(fout_s11_1(T96)
+        ,T93
+        ,T108) -> fout_s9_0(T96)
+fin_s12(s(T164),T165) ->
+  u_s12_s14(fin_s14(T164,T165)
+           ,s(T164)
+           ,T165)
+u_s12_s14(fout_s14_0(T166)
+         ,s(T164)
+         ,T165) -> fout_s12_0(T166)
+fin_s17(s(T208),s(T209)) ->
+  u_s17_s19(fin_s14(T208,T209)
+           ,s(T208)
+           ,s(T209))
+u_s17_s19(fout_s14_0(T210)
+         ,s(T208)
+         ,s(T209)) -> fout_s17_0(T210)
+fin_s18(T236,Left0()) ->
+  fout_s18_0(T236)
+fin_s14(T164,T165) ->
+  u_s14_s16(fin_s16(T164,T165)
+           ,T164
+           ,T165)
+u_s14_s16(fout_s16_0(T166)
+         ,T164
+         ,T165) -> fout_s14_0(T166)
+u_s14_s16(fout_s16_1(T166)
+         ,T164
+         ,T165) -> fout_s14_0(T166)
+fin_s29(s(T338),T339) ->
+  u_s29_s31(fin_s31(T338,T339)
+           ,s(T338)
+           ,T339)
+u_s29_s31(fout_s31_0()
+         ,s(T338)
+         ,T339) -> fout_s29_0()
+fin_s34(s(T370),s(T371)) ->
+  u_s34_s36(fin_s31(T370,T371)
+           ,s(T370)
+           ,s(T371))
+u_s34_s36(fout_s31_0()
+         ,s(T370)
+         ,s(T371)) -> fout_s34_0()
+fin_s35(T390,Left0()) ->
+  fout_s35_0()
+fin_s31(T338,T339) ->
+  u_s31_s33(fin_s33(T338,T339)
+           ,T338
+           ,T339)
+u_s31_s33(fout_s33_0()
+         ,T338
+         ,T339) -> fout_s31_0()
+u_s31_s33(fout_s33_1()
+         ,T338
+         ,T339) -> fout_s31_0()
+fin_s7(T93,T108) ->
+  u_s7_s9(fin_s9(T93,T108)
+         ,T93
+         ,T108)
+u_s7_s9(fout_s9_0(T130)
+       ,T93
+       ,T108) -> u_s9_s10(fin_s0(T130
+                                ,s(T108))
+                         ,T93
+                         ,T108
+                         ,T130)
+u_s9_s10(fout_s0_0(T131)
+        ,T93
+        ,T108
+        ,T130) -> fout_s7_0(T130,T131)
+fin_s1(T2,T1) ->
+  u_s1_s2_u_s1_s3(fin_s2(T2,T1)
+                 ,fin_s3(T2,T1)
+                 ,T2
+                 ,T1)
+u_s1_s2_u_s1_s3(fout_s2_0(T0)
+               ,P
+               ,T2
+               ,T1) -> fout_s1_0(T0)
+u_s1_s2_u_s1_s3(P
+               ,fout_s3_0(T0)
+               ,T2
+               ,T1) -> fout_s1_1(T0)
+fin_s11(T93,T108) ->
+  u_s11_s12_u_s11_s13(fin_s12(T93
+                             ,T108)
+                     ,fin_s13(T93,T108)
+                     ,T93
+                     ,T108)
+u_s11_s12_u_s11_s13(fout_s12_0(T96)
+                   ,P
+                   ,T93
+                   ,T108) -> fout_s11_0(T96)
+u_s11_s12_u_s11_s13(P
+                   ,fout_s13_0(T96)
+                   ,T93
+                   ,T108) -> fout_s11_1(T96)
+fin_s16(T164,T165) ->
+  u_s16_s17_u_s16_s18(fin_s17(T164
+                             ,T165)
+                     ,fin_s18(T164,T165)
+                     ,T164
+                     ,T165)
+u_s16_s17_u_s16_s18(fout_s17_0(T166)
+                   ,P
+                   ,T164
+                   ,T165) -> fout_s16_0(T166)
+u_s16_s17_u_s16_s18(P
+                   ,fout_s18_0(T166)
+                   ,T164
+                   ,T165) -> fout_s16_1(T166)
+fin_s28(T299,T310) ->
+  u_s28_s29_u_s28_s30(fin_s29(T299
+                             ,T310)
+                     ,fin_s30(T299,T310)
+                     ,T299
+                     ,T310)
+u_s28_s29_u_s28_s30(fout_s29_0()
+                   ,P
+                   ,T299
+                   ,T310) -> fout_s28_0()
+u_s28_s29_u_s28_s30(P
+                   ,fout_s30_0()
+                   ,T299
+                   ,T310) -> fout_s28_1()
+fin_s33(T338,T339) ->
+  u_s33_s34_u_s33_s35(fin_s34(T338
+                             ,T339)
+                     ,fin_s35(T338,T339)
+                     ,T338
+                     ,T339)
+u_s33_s34_u_s33_s35(fout_s34_0()
+                   ,P
+                   ,T338
+                   ,T339) -> fout_s33_0()
+u_s33_s34_u_s33_s35(P
+                   ,fout_s35_0()
+                   ,T338
+                   ,T339) -> fout_s33_1()
+)

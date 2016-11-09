@@ -1,0 +1,1 @@
+Use minExSteps >= 2 to get a TRS that TcT can handle. 

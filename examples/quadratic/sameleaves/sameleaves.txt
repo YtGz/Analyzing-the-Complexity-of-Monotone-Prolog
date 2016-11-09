@@ -1,0 +1,91 @@
+(VAR T32 T96 T97 T98 T99 T100 T101 T102 T176 T177 T202 T203 T204 T205 T206 T306 T307 T332 T333 T334 T335 T336 T145 T146 T147 T277)
+(RULES
+fin_s0(leaf(T32),leaf(T32)) ->
+  fout_s0_0()
+fin_s0(tree(T96,T97)
+      ,tree(T98,T99)) ->
+  u_s0_s5(fin_s5(T96,T97,T98,T99)
+         ,tree(T96,T97)
+         ,tree(T98,T99))
+u_s0_s5(fout_s5_0(T100
+                 ,T101
+                 ,T102)
+       ,tree(T96,T97)
+       ,tree(T98,T99)) -> fout_s0_0()
+fin_s7(leaf(T176),T177) ->
+  fout_s7_0(T176,T177)
+fin_s7(tree(T202,T203),T204) ->
+  u_s7_s13(fin_s7(T202
+                 ,tree(T203,T204))
+          ,tree(T202,T203)
+          ,T204)
+u_s7_s13(fout_s7_0(T205,T206)
+        ,tree(T202,T203)
+        ,T204) -> fout_s7_0(T205,T206)
+fin_s15(leaf(T306),T307,T306) ->
+  fout_s15_0(T307)
+fin_s15(tree(T332,T333)
+       ,T334
+       ,T335) -> u_s15_s21(fin_s15(T332
+                                  ,tree(T333,T334)
+                                  ,T335)
+                          ,tree(T332,T333)
+                          ,T334
+                          ,T335)
+u_s15_s21(fout_s15_0(T336)
+         ,tree(T332,T333)
+         ,T334
+         ,T335) -> fout_s15_0(T336)
+fin_s5(T96,T97,T98,T99) ->
+  u_s5_s7(fin_s7(T96,T97)
+         ,T96
+         ,T97
+         ,T98
+         ,T99)
+u_s5_s7(fout_s7_0(T145,T146)
+       ,T96
+       ,T97
+       ,T98
+       ,T99) -> u_s7_s8(fin_s8(T98
+                              ,T99
+                              ,T145
+                              ,T146)
+                       ,T96
+                       ,T97
+                       ,T98
+                       ,T99
+                       ,T145
+                       ,T146)
+u_s7_s8(fout_s8_0(T147)
+       ,T96
+       ,T97
+       ,T98
+       ,T99
+       ,T145
+       ,T146) -> fout_s5_0(T145
+                          ,T146
+                          ,T147)
+fin_s8(T98,T99,T145,T146) ->
+  u_s8_s15(fin_s15(T98,T99,T145)
+          ,T98
+          ,T99
+          ,T145
+          ,T146)
+u_s8_s15(fout_s15_0(T277)
+        ,T98
+        ,T99
+        ,T145
+        ,T146) -> u_s15_s16(fin_s0(T146
+                                  ,T277)
+                           ,T98
+                           ,T99
+                           ,T145
+                           ,T146
+                           ,T277)
+u_s15_s16(fout_s0_0()
+         ,T98
+         ,T99
+         ,T145
+         ,T146
+         ,T277) -> fout_s8_0(T277)
+)

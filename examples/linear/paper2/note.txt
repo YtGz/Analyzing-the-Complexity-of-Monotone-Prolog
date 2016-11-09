@@ -1,0 +1,1 @@
+Set the 'minExSteps' parameter of the heuristic to 2 for optimal results.

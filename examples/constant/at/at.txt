@@ -1,0 +1,45 @@
+(VAR T1 T0 T8 T19 P)
+(RULES
+fin_s0() -> u_s0_s1(fin_s1())
+u_s0_s1(fout_s1_0(T1,T0)) ->
+  fout_s0_0(T1,T0)
+u_s0_s1(fout_s1_1(T1,T0)) ->
+  fout_s0_0(T1,T0)
+u_s0_s1(fout_s1_2(T1,T0)) ->
+  fout_s0_0(T1,T0)
+fin_s2() -> u_s2_s4(fin_s4())
+u_s2_s4(fout_s4_0(T8)) ->
+  fout_s2_0(T8,fido())
+fin_s3() -> fout_s3_0(ta()
+                     ,mary())
+fin_s3() -> fout_s3_1(ta()
+                     ,mary())
+fin_s3() -> fout_s3_0(jm()
+                     ,mary())
+fin_s3() -> fout_s3_1(jm()
+                     ,mary())
+fin_s3() -> fout_s3_0(jm()
+                     ,mary())
+fin_s3() -> fout_s3_1(jm()
+                     ,mary())
+fin_s6() -> fout_s6_0(ta())
+fin_s6() -> fout_s6_0(jm())
+fin_s6() -> fout_s6_0(jm())
+fin_s7(jm()) -> fout_s7_0()
+fin_s4() -> u_s4_s6(fin_s6())
+u_s4_s6(fout_s6_0(T19)) ->
+  u_s6_s7(fin_s7(T19),T19)
+u_s6_s7(fout_s7_0(),T19) ->
+  fout_s4_0(T19)
+fin_s1() ->
+  u_s1_s2_u_s1_s3(fin_s2()
+                 ,fin_s3())
+u_s1_s2_u_s1_s3(fout_s2_0(T1,T0)
+               ,P) -> fout_s1_0(T1,T0)
+u_s1_s2_u_s1_s3(P
+               ,fout_s3_0(T1,T0)) ->
+  fout_s1_1(T1,T0)
+u_s1_s2_u_s1_s3(P
+               ,fout_s3_1(T1,T0)) ->
+  fout_s1_2(T1,T0)
+)

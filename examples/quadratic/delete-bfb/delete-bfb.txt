@@ -1,0 +1,86 @@
+(VAR T80 T81 T90 T91 T128 T131 T129 T132 T406 T407 T410 T409 T717 T718 T719 T721 T913 T914 T172 T173 T199 T196 T200 T198 T448 T460 T461)
+(RULES
+fin_s0(T80,T81) -> fout_s0()
+fin_s0(T90,T91) -> fout_s0()
+fin_s0(T128
+      ,tree(T131,T129,T132)) ->
+  u_s0_s10(fin_s10(T131,T132)
+          ,T128
+          ,tree(T131,T129,T132))
+u_s0_s10(fout_s10()
+        ,T128
+        ,tree(T131,T129,T132)) ->
+  fout_s0()
+fin_s0(T406
+      ,tree(T407,T410,T409)) ->
+  u_s0_s20(fin_s20(T406,T407,T410)
+          ,T406
+          ,tree(T407,T410,T409))
+u_s0_s20(fout_s20()
+        ,T406
+        ,tree(T407,T410,T409)) ->
+  fout_s0()
+fin_s0(T717
+      ,tree(T718,T719,T721)) ->
+  u_s0_s30(fin_s30(T718,T717,T721)
+          ,T717
+          ,tree(T718,T719,T721))
+u_s0_s30(fout_s30()
+        ,T717
+        ,tree(T718,T719,T721)) ->
+  fout_s0()
+fin_s0(T913,T914) -> fout_s0()
+fin_s10(T172,T173) -> fout_s10()
+fin_s10(T199
+       ,tree(T196,T200,T198)) ->
+  u_s10_s16(fin_s10(T199,T200)
+           ,T199
+           ,tree(T196,T200,T198))
+u_s10_s16(fout_s10()
+         ,T199
+         ,tree(T196,T200,T198)) ->
+  fout_s10()
+fin_s22(Left0(),s(T448)) ->
+  fout_s22()
+fin_s22(s(T460),s(T461)) ->
+  u_s22_s28(fin_s22(T460,T461)
+           ,s(T460)
+           ,s(T461))
+u_s22_s28(fout_s22()
+         ,s(T460)
+         ,s(T461)) -> fout_s22()
+fin_s20(T406,T407,T410) ->
+  u_s20_s22(fin_s22(T406,T407)
+           ,T406
+           ,T407
+           ,T410)
+u_s20_s22(fout_s22()
+         ,T406
+         ,T407
+         ,T410) -> u_s22_s23(fin_s0(T406
+                                   ,T410)
+                            ,T406
+                            ,T407
+                            ,T410)
+u_s22_s23(fout_s0()
+         ,T406
+         ,T407
+         ,T410) -> fout_s20()
+fin_s30(T718,T717,T721) ->
+  u_s30_s32(fin_s22(T718,T717)
+           ,T718
+           ,T717
+           ,T721)
+u_s30_s32(fout_s22()
+         ,T718
+         ,T717
+         ,T721) -> u_s32_s33(fin_s0(T717
+                                   ,T721)
+                            ,T718
+                            ,T717
+                            ,T721)
+u_s32_s33(fout_s0()
+         ,T718
+         ,T717
+         ,T721) -> fout_s30()
+)

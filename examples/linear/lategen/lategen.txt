@@ -1,0 +1,36 @@
+(VAR P)
+(RULES
+fin_s0() -> u_s0_s4(fin_s4())
+u_s0_s4(fout_s4_0()) ->
+  fout_s0_0()
+u_s0_s4(fout_s4_1()) ->
+  fout_s0_0()
+u_s0_s4(fout_s4_2()) ->
+  fout_s0_0()
+fin_s5() -> u_s5_s9(fin_s9())
+u_s5_s9(fout_s9_0()) ->
+  fout_s5_0()
+u_s5_s9(fout_s9_1()) ->
+  fout_s5_0()
+u_s5_s9(fout_s9_2()) ->
+  fout_s5_0()
+fin_s10() -> fout_s10_0()
+fin_s4() ->
+  u_s4_s5_u_s4_s6(fin_s5()
+                 ,fin_s6())
+u_s4_s5_u_s4_s6(fout_s5_0()
+               ,P) -> fout_s4_0()
+u_s4_s5_u_s4_s6(P
+               ,fout_s6_0()) -> fout_s4_1()
+u_s4_s5_u_s4_s6(P
+               ,fout_s6_1()) -> fout_s4_2()
+fin_s9() ->
+  u_s9_s10_u_s9_s11(fin_s10()
+                   ,fin_s11())
+u_s9_s10_u_s9_s11(fout_s10_0()
+                 ,P) -> fout_s9_0()
+u_s9_s10_u_s9_s11(P
+                 ,fout_s11_0()) -> fout_s9_1()
+u_s9_s10_u_s9_s11(P
+                 ,fout_s11_1()) -> fout_s9_2()
+)

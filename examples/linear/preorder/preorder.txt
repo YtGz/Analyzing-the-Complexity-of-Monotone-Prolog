@@ -1,0 +1,46 @@
+(VAR T46 T298 T299 T300 T144 T145 T146)
+(RULES
+fin_s0(T46) ->
+  u_s0_s2(fin_s2(T46),T46)
+u_s0_s2(fout_s2_0(),T46) ->
+  fout_s0_0()
+fin_s10(nil()) -> fout_s10_0()
+fin_s10(tree(T298,T299,T300)) ->
+  u_s10_s16(fin_s16(T298,T300)
+           ,tree(T298,T299,T300))
+u_s10_s16(fout_s16_0()
+         ,tree(T298,T299,T300)) ->
+  fout_s10_0()
+fin_s2(nil()) -> fout_s2_0()
+fin_s2(tree(T144,T145,T146)) ->
+  u_s2_s8(fin_s8(T144,T146)
+         ,tree(T144,T145,T146))
+u_s2_s8(fout_s8_0()
+       ,tree(T144,T145,T146)) ->
+  fout_s2_0()
+fin_s8(T144,T146) ->
+  u_s8_s10(fin_s10(T144)
+          ,T144
+          ,T146)
+u_s8_s10(fout_s10_0()
+        ,T144
+        ,T146) -> u_s10_s11(fin_s2(T146)
+                           ,T144
+                           ,T146)
+u_s10_s11(fout_s2_0()
+         ,T144
+         ,T146) -> fout_s8_0()
+fin_s16(T298,T300) ->
+  u_s16_s18(fin_s10(T298)
+           ,T298
+           ,T300)
+u_s16_s18(fout_s10_0()
+         ,T298
+         ,T300) ->
+  u_s18_s19(fin_s10(T300)
+           ,T298
+           ,T300)
+u_s18_s19(fout_s10_0()
+         ,T298
+         ,T300) -> fout_s16_0()
+)

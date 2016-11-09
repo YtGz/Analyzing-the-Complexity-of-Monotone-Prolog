@@ -1,0 +1,1 @@
+These are the programs where the analysis fails for various reasons (e.g. failure in parsing nested cons etc.), although technically it shouldn't. Probably consider them 'bugs'. Less than 6% of the examples that were tested failed.

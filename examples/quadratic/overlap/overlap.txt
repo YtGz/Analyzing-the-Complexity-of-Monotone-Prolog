@@ -1,0 +1,76 @@
+(VAR T45 T46 T47 T76)
+(RULES
+fin_s0(T45,T46) ->
+  u_s0_s2(fin_s2(T45,T46),T45,T46)
+u_s0_s2(fout_s2_0(T47)
+       ,T45
+       ,T46) -> fout_s0_0()
+fin_s2(T45,T46) ->
+  u_s2_s4(fin_s4(T45),T45,T46)
+u_s2_s4(fout_s4_0(T76)
+       ,T45
+       ,T46) -> u_s4_s5(fin_s5(T76,T46)
+                       ,T45
+                       ,T46
+                       ,T76)
+u_s4_s5(fout_s5_0()
+       ,T45
+       ,T46
+       ,T76) -> fout_s2_0(T76)
+)
+
+=> TcT output: O(1)
+
+
+
+(VAR T97 T98 T116 T117 T115 T158 T159 T157)
+(RULES
+fin_s4(:(T97,T98)) ->
+  fout_s4_0(T97)
+fin_s4(:(T116,T117)) ->
+  u_s4_s10(fin_s4(T117)
+          ,:(T116,T117))
+u_s4_s10(fout_s4_0(T115)
+        ,:(T116,T117)) ->
+  fout_s4_0(T115)
+fin_s4(:(T158,T159)) ->
+  u_s4_s12(fin_s4(T159)
+          ,:(T158,T159))
+u_s4_s12(fout_s4_0(T157)
+        ,:(T158,T159)) ->
+  fout_s4_0(T157)
+)
+
+=> TcT output: O(n)
+
+
+
+
+(VAR T207 T208 T226 T227 T265 T266 T267)
+(RULES
+fin_s5(T207,:(T207,T208)) ->
+  fout_s5_0()
+fin_s5(T226,:(T226,T227)) ->
+  u_s5_s18(fin_s5(T226,T227)
+          ,T226
+          ,:(T226,T227))
+u_s5_s18(fout_s5_0()
+        ,T226
+        ,:(T226,T227)) -> fout_s5_0()
+fin_s5(T265,:(T266,T267)) ->
+  u_s5_s20(fin_s5(T265,T267)
+          ,T265
+          ,:(T266,T267))
+u_s5_s20(fout_s5_0()
+        ,T265
+        ,:(T266,T267)) -> fout_s5_0()
+)
+
+=> TcT output: O(n)
+
+
+
+
+result:
+
+O(1) + O(n) * O(n) => O(n²)

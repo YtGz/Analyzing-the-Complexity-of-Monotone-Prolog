@@ -1,0 +1,3 @@
+TcT yields a timeout.
+
+problem: AProVE does not apply the parallel rule to node 51 (of AProVEs graph), my implementation does, making the TRS more complex.

@@ -1,0 +1,4 @@
+error message:
+
+
+code.exe: Cannot encode abstract state: multiple goals.

@@ -1,0 +1,16 @@
+(VAR T56 T59 T58 T104 T105)
+(RULES
+fin_s0(Left0()) ->
+  fout_s0_0(Left0())
+fin_s0(s(T56)) ->
+  u_s0_s5(fin_s5(T56),s(T56))
+u_s0_s5(fout_s5_0(T59,T58)
+       ,s(T56)) -> fout_s0_0(T58)
+fin_s5(T56) ->
+  u_s5_s7(fin_s0(T56),T56)
+u_s5_s7(fout_s0_0(T104),T56) ->
+  u_s7_s8(fin_s0(T104),T56,T104)
+u_s7_s8(fout_s0_0(T105)
+       ,T56
+       ,T104) -> fout_s5_0(T104,T105)
+)

@@ -1,0 +1,75 @@
+(VAR T13 T31 T32 T33 T63 T64 P)
+(RULES
+fin_s0([]()) -> fout_s0_0()
+fin_s0(:(T13,[]())) ->
+  fout_s0_0()
+fin_s0(:(T31,:(T32,T33))) ->
+  u_s0_s9(fin_s9(T31,T32,T33)
+         ,:(T31,:(T32,T33)))
+u_s0_s9(fout_s9_0()
+       ,:(T31,:(T32,T33))) ->
+  fout_s0_0()
+fin_s11(T31,T32) ->
+  u_s11_s13(fin_s13(T31,T32)
+           ,T31
+           ,T32)
+u_s11_s13(fout_s13_0()
+         ,T31
+         ,T32) -> fout_s11_0()
+u_s11_s13(fout_s13_1()
+         ,T31
+         ,T32) -> fout_s11_0()
+u_s11_s13(fout_s13_2()
+         ,T31
+         ,T32) -> fout_s11_0()
+fin_s14(s(T63),s(T64)) ->
+  u_s14_s16(fin_s11(T63,T64)
+           ,s(T63)
+           ,s(T64))
+u_s14_s16(fout_s11_0()
+         ,s(T63)
+         ,s(T64)) -> fout_s14_0()
+fin_s15(Left0(),s(Left0())) ->
+  fout_s15_0()
+fin_s15(Left0(),s(Left0())) ->
+  fout_s15_1()
+fin_s15(Left0(),Left0()) ->
+  fout_s15_0()
+fin_s15(Left0(),Left0()) ->
+  fout_s15_1()
+fin_s9(T31,T32,T33) ->
+  u_s9_s11(fin_s11(T31,T32)
+          ,T31
+          ,T32
+          ,T33)
+u_s9_s11(fout_s11_0()
+        ,T31
+        ,T32
+        ,T33) -> u_s11_s12(fin_s0(:(T32
+                                   ,T33))
+                          ,T31
+                          ,T32
+                          ,T33)
+u_s11_s12(fout_s0_0()
+         ,T31
+         ,T32
+         ,T33) -> fout_s9_0()
+fin_s13(T31,T32) ->
+  u_s13_s14_u_s13_s15(fin_s14(T31
+                             ,T32)
+                     ,fin_s15(T31,T32)
+                     ,T31
+                     ,T32)
+u_s13_s14_u_s13_s15(fout_s14_0()
+                   ,P
+                   ,T31
+                   ,T32) -> fout_s13_0()
+u_s13_s14_u_s13_s15(P
+                   ,fout_s15_0()
+                   ,T31
+                   ,T32) -> fout_s13_1()
+u_s13_s14_u_s13_s15(P
+                   ,fout_s15_1()
+                   ,T31
+                   ,T32) -> fout_s13_2()
+)

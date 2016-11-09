@@ -1,0 +1,5 @@
+(VAR T8 T34 T60)
+(RULES
+fin_s0(T8) -> fout_s0_0(g(T8))
+fin_s0(T34) -> fout_s0_0(f(T34))
+)

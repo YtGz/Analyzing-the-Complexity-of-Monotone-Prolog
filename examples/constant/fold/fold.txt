@@ -1,0 +1,45 @@
+(VAR T2 T1 T0 T41 T42 T129 P)
+(RULES
+fin_s0(T2,T1) ->
+  u_s0_s1(fin_s1(T2,T1),T2,T1)
+u_s0_s1(fout_s1_0(T0),T2,T1) ->
+  fout_s0_0(T0)
+u_s0_s1(fout_s1_1(T0),T2,T1) ->
+  fout_s0_0(T0)
+fin_s2(a(),:(b(),T41)) ->
+  u_s2_s9(fin_s9(T41)
+         ,a()
+         ,:(b(),T41))
+u_s2_s9(fout_s9_0(T42)
+       ,a()
+       ,:(b(),T41)) -> fout_s2_0(T42)
+u_s2_s9(fout_s9_1(T42)
+       ,a()
+       ,:(b(),T41)) -> fout_s2_0(T42)
+fin_s3(T129,[]()) ->
+  fout_s3_0(T129)
+fin_s11([]()) -> fout_s11_0(c())
+fin_s1(T2,T1) ->
+  u_s1_s2_u_s1_s3(fin_s2(T2,T1)
+                 ,fin_s3(T2,T1)
+                 ,T2
+                 ,T1)
+u_s1_s2_u_s1_s3(fout_s2_0(T0)
+               ,P
+               ,T2
+               ,T1) -> fout_s1_0(T0)
+u_s1_s2_u_s1_s3(P
+               ,fout_s3_0(T0)
+               ,T2
+               ,T1) -> fout_s1_1(T0)
+fin_s9(T41) ->
+  u_s9_s10_u_s9_s11(fin_s10(T41)
+                   ,fin_s11(T41)
+                   ,T41)
+u_s9_s10_u_s9_s11(fout_s10_0(T42)
+                 ,P
+                 ,T41) -> fout_s9_0(T42)
+u_s9_s10_u_s9_s11(P
+                 ,fout_s11_0(T42)
+                 ,T41) -> fout_s9_1(T42)
+)

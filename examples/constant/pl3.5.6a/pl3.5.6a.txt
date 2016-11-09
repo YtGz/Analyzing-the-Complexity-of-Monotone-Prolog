@@ -1,0 +1,5 @@
+(VAR)
+(RULES
+fin_s0() -> fout_s0_0(:(Left1()
+                       ,[]()))
+)

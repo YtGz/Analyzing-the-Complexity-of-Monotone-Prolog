@@ -1,0 +1,54 @@
+(VAR T51 T59 T60 T61 T180 T181 T182 T398 T399 T400 T230)
+(RULES
+fin_s0(T51,void()) -> fout_s0()
+fin_s0(T59,tree(T59,T60,T61)) ->
+  fout_s0()
+fin_s0(T180
+      ,tree(T180,T181,T182)) ->
+  u_s0_s12(fin_s12(T180,T181)
+          ,T180
+          ,tree(T180,T181,T182))
+u_s0_s12(fout_s12()
+        ,T180
+        ,tree(T180,T181,T182)) ->
+  fout_s0()
+fin_s0(T398
+      ,tree(T398,T399,T400)) ->
+  u_s0_s20(fin_s20(T398,T400)
+          ,T398
+          ,tree(T398,T399,T400))
+u_s0_s20(fout_s20()
+        ,T398
+        ,tree(T398,T399,T400)) ->
+  fout_s0()
+fin_s14(s(T230)) ->
+  u_s14_s18(fin_s14(T230),s(T230))
+u_s14_s18(fout_s14(),s(T230)) ->
+  fout_s14()
+fin_s12(T180,T181) ->
+  u_s12_s14(fin_s14(T180)
+           ,T180
+           ,T181)
+u_s12_s14(fout_s14()
+         ,T180
+         ,T181) -> u_s14_s15(fin_s0(T180
+                                   ,T181)
+                            ,T180
+                            ,T181)
+u_s14_s15(fout_s0()
+         ,T180
+         ,T181) -> fout_s12()
+fin_s20(T398,T400) ->
+  u_s20_s22(fin_s14(T398)
+           ,T398
+           ,T400)
+u_s20_s22(fout_s14()
+         ,T398
+         ,T400) -> u_s22_s23(fin_s0(T398
+                                   ,T400)
+                            ,T398
+                            ,T400)
+u_s22_s23(fout_s0()
+         ,T398
+         ,T400) -> fout_s20()
+)

@@ -1,0 +1,3 @@
+TcT yields timeout.
+
+problem: my implementation uses a parallel step where AProVE does not. The additional rules resulting thereof make the TRS more complex as it needs be.

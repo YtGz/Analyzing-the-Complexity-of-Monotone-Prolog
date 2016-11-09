@@ -1,0 +1,22 @@
+(VAR T26 T25 T27 T55 T56 T57 T73 T76 T74 T75)
+(RULES
+fin_s0(T26) ->
+  u_s0_s2(fin_s2(T26),T26)
+u_s0_s2(fout_s2(T25,T27),T26) ->
+  fout_s0(T25)
+fin_s2(T55) -> fout_s2([](),T55)
+fin_s2(T55) ->
+  u_s2_s7(fin_s7(T55),T55)
+u_s2_s7(fout_s7(T56,T57),T55) ->
+  fout_s2(T56,T57)
+fin_s2(T26) ->
+  u_s2_s6(fin_s7(T26),T26)
+u_s2_s6(fout_s7(T25,T27),T26) ->
+  fout_s2(T25,T27)
+fin_s7(:(T73,T76)) ->
+  u_s7_s8(fin_s2(T76),:(T73,T76))
+u_s7_s8(fout_s2(T74,T75)
+       ,:(T73,T76)) -> fout_s7(:(T73
+                                ,T74)
+                              ,T75)
+)

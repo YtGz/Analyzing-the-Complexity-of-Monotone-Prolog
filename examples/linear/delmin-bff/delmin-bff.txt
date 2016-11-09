@@ -1,0 +1,11 @@
+(VAR T17 T18 T101 T102 T103)
+(RULES
+fin_s0(tree(T17,void(),T18)) ->
+  fout_s0()
+fin_s0(tree(T101,T102,T103)) ->
+  u_s0_s9(fin_s0(T102)
+         ,tree(T101,T102,T103))
+u_s0_s9(fout_s0()
+       ,tree(T101,T102,T103)) ->
+  fout_s0()
+)

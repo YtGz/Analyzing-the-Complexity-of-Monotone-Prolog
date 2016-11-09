@@ -1,0 +1,1 @@
+Note that the SVG of this example contains no connection paths, split or parallel nodes, thus the resulting TRS has no rules (i.e. constant complexity). 
