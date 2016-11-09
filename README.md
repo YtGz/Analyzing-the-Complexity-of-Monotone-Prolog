@@ -75,7 +75,7 @@ Determines the number of CASE nodes that have to be traversed before the graph c
 - **maxBranchingFactor:**  
 The branching factor of a function symbol f is the number of clauses h :- B in the Prolog program for which root(h) = f. This parameter determines how big the branching factor of a recursive (w.r.t. the Prolog program) function symbol f has to be such that a state with a clause h :- B with root(h) = f is still considered a suitable instance candidate even if it has more different variables than the state we want to draw the instance edge from.  
 If this parameter is chosen too small too much precision is lost, while a high value can result in enormously big graphs. 
-- **finiteGeneralizationDepth ≥ 1:**  
+- **finiteGeneralizationDepth ≥ 2:**  
 Maximum nested depth of function symbols before a GENERALIZATION will be applied.  
 Values too big lead to unfeasable graphs sizes, values that are too small diminish precision.
 - **finiteGeneralizationPos ∈ {1,...,finiteGeneralizationDepth}:**  
