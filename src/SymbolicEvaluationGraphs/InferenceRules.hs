@@ -46,7 +46,7 @@ eval
     => AbstractState
     -> Control.Monad.State.StateT (Int, Int) (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') m))) (AbstractState, AbstractState)
 eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
-    (h_:b'_,_) <- instantiateWithFreshAbstractVariables (h : maybeToList b) --instantiateWithFreshVariables (h : maybeToList b)
+    (h_:b'_,_) <- instantiateWithFreshAbstractVariables (h : maybeToList b)
     b_ <- renameVariables b'_
     ([t_],freshVarSub) <- instantiateWithFreshAbstractVariables [t]
     let g_ = map (apply (restrictSubstToG freshVarSub g)) g

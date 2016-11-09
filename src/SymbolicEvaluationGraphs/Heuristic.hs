@@ -48,7 +48,7 @@ finiteGeneralizationPos :: Int
 finiteGeneralizationPos = 2
 
 graphSizeLimit :: Int
-graphSizeLimit = 400
+graphSizeLimit = maxBound :: Int -- the only purpose of the limit is to aid debugging
 
 generateSymbolicEvaluationGraph
     :: [Clause]
