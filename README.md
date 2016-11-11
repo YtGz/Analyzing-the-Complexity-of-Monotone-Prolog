@@ -4,6 +4,22 @@ A semi-automatic, symbolic evaluation graph based complexity analyzer for monoto
 
 
 <br>
+## Installation
+
+```bash
+$ git clone https://github.com/YtGz/Analyzing-the-Complexity-of-Monotone-Prolog.git
+$ cd Analyzing-the-Complexity-of-Monotone-Prolog/
+$ cabal update
+$ cabal install parsec bytestring containers mtl multiset-0.2.2 ansi-wl-pprint array union-find-array diagrams-svg diagrams-lib diagrams-contrib SVGFonts MissingH rosezipper monad-extras monad-supply lens
+$ cabal configure
+$ cabal build
+$ ./camp -i example.pl -g example.svg -o example.trs
+```
+Requires [Cabal (version 1.10 or higher)](https://www.haskell.org/cabal/download.html) and a Haskell 2010 compatible compiler (e.g. [GHC](https://www.haskell.org/ghc/)).  
+See [supported platforms](https://ghc.haskell.org/trac/ghc/wiki/Platforms).
+
+
+<br>
 ## Usage
 
 
@@ -23,6 +39,12 @@ Syntax for queries:
 ```prolog
 :- query.
 ```
+
+
+### Output
+In some instances the tool may ask you to look at the symbolic evaluation graph. In such a case a rendering of the graph is automatically generated at the path that was given as command line argument. The resulting vector file can be viewed with any modern browser. Graph rendering can be forced if inspection of the graph is desired.
+
+Term rewrite systems are output in [TPDB legacy format](https://www.lri.fr/~marche/tpdb/format.html) and can directly be used as input for TcT. Tools for conversion to the newer format (XML) are [available](http://www.termination-portal.org/wiki/TPDB#Tools). No matter which tool you choose to use to analyze the rewrite systems make sure to determine complexity for *innermost rewriting*.
 
 
 ### Choose query class
@@ -56,7 +78,7 @@ A split node is *multiplicative* iff:
   </li>
 </ol>
 (A query is deterministic iff it generates at most one answer substitution at most once.)  
-When prompted by the tool, respond with a suitable `[Int]`, stating the node numbers of the multiplicative split nodes. 
+When prompted by the tool, respond with a suitable `[Int]`, stating the node numbers of the multiplicative split nodes.
 
 
 ### Multiple term rewrite systems
@@ -74,7 +96,7 @@ Several parameters control the heuristic used to construct the symbolic evaluati
 Determines the number of CASE nodes that have to be traversed before the graph can be closed by an INSTANCE rule or a GENERALIZATION, PARALLEL or SPLIT inference rule can be applied.
 - **maxBranchingFactor:**  
 The branching factor of a function symbol f is the number of clauses h :- B in the Prolog program for which root(h) = f. This parameter determines how big the branching factor of a recursive (w.r.t. the Prolog program) function symbol f has to be such that a state with a clause h :- B with root(h) = f is still considered a suitable instance candidate even if it has more different variables than the state we want to draw the instance edge from.  
-If this parameter is chosen too small too much precision is lost, while a high value can result in enormously big graphs. 
+If this parameter is chosen too small too much precision is lost, while a high value can result in enormously big graphs.
 - **finiteGeneralizationDepth ≥ 2:**  
 Maximum nested depth of function symbols before a GENERALIZATION will be applied.  
 Values too big lead to unfeasable graphs sizes, values that are too small diminish precision.
@@ -89,4 +111,3 @@ All parameters can be found at the top of the file [Heuristic.hs](src/SymbolicEv
 ## Further information
 
 For further information see [J. Giesl, T. Ströder, P. Schneider-Kamp, F. Emmes, and C. Fuhs. Symbolic Evaluation Graphs and Term Rewriting: A General Methodology for Analyzing Logic Programs. In Proceedings of the 14th Symposium on Principles and Practice of Declarative Programming, PPDP ’12, pages 1–12, New York, NY, USA, 2012. ACM.](http://verify.rwth-aachen.de/giesl/papers/PPDP12.pdf)
-
