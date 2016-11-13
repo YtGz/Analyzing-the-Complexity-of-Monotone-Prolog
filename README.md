@@ -99,7 +99,7 @@ The branching factor of a function symbol f is the number of clauses h :- B in t
 If this parameter is chosen too small too much precision is lost, while a high value can result in enormously big graphs.
 - **finiteGeneralizationDepth ≥ 2:**  
 Maximum nested depth of function symbols before a GENERALIZATION will be applied.  
-Values too big lead to unfeasable graphs sizes, values that are too small diminish precision.
+Values too big lead to unfeasible graphs sizes, values that are too small diminish precision.
 - **finiteGeneralizationPos ∈ {1,...,finiteGeneralizationDepth}:**  
 Determines at what depth GENERALIZATIONS will be applied.  
 Positions near the root make it easier to find instances later in the path (possibly resulting in a smaller graph), however, the more knowledge we keep about the shape of the generalized term, the more precision we preserve (GENERALIZATION generally is a precision impairing operation).  
