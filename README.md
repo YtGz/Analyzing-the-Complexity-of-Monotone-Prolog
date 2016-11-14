@@ -83,7 +83,7 @@ When prompted by the tool, respond with a suitable `[Int]`, stating the node num
 
 ### Multiple term rewrite systems
 
-The symbolic evaluation graph is split into subgraphs at multiplicative split nodes before the transformation to a term rewrite system, thus multiple rewrite systems may be generated. By looking at the labeling of multiplicative split nodes and function symbols in the TRS, each TRS can easily be matched to a subgraph starting at either the root node or a mult. split node. To calculate the final complexity bound each rewrite system has to be analyzed seperately (e.g. with [TcT](http://cl-informatik.uibk.ac.at/software/tct/)) and the results have to be combined in the following way:
+The symbolic evaluation graph is split into subgraphs at multiplicative split nodes before the transformation to a term rewrite system, thus multiple rewrite systems may be generated. By looking at the labeling of multiplicative split nodes and function symbols in the TRS, each TRS can easily be matched to a subgraph starting at either the root node or a mult. split node. To calculate the final complexity bound each rewrite system has to be analyzed separately (e.g. with [TcT](http://cl-informatik.uibk.ac.at/software/tct/)) and the results have to be combined in the following way:
 - bounds of the two subgraphs of a multiplicative split node have to be multiplied
 - bound of the subgraph above a multiplicative split node has to be added
 
