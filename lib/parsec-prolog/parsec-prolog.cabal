@@ -37,7 +37,7 @@ Library
                     Language.Prolog.Lexer,
                     Language.Prolog.Operator,
                     Language.Prolog.Parser
-  Build-Depends:    base >= 3, parsec >= 3, bytestring
-  hs-source-dirs:   src 
-  Extensions:       FlexibleContexts
+  Build-Depends:    base >= 3, parsec >= 3, bytestring, file-embed
+  hs-source-dirs:   src
+  Extensions:       FlexibleContexts, TemplateHaskell
   GHC-prof-options: -rtsopts -auto-all

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, TemplateHaskell #-}
 
 module Language.Prolog.Parser where
 
@@ -13,6 +13,7 @@ import Control.Monad (when)
 
 import qualified Data.ByteString.Char8 as C
 import Text.Parsec.ByteString
+import Data.FileEmbed
 
 -- type OperatorTable s u m a = [[Operator s u m a]]
 
@@ -247,9 +248,9 @@ runPrologParser p st sourcename input = runP p' st sourcename input
             return (res, st')
 
 parseProlog2 input = do
-    ops <- readFile "C:\\Users\\Philipp\\Documents\\Uni\\Bachelorarbeit\\code\\lib\\parsec-prolog\\pl\\op.pl"
+    let ops = $(makeRelativeToProject "pl/op.pl" >>= embedFile)
     (p, optable)<- parse st' "pl/op.pl" ops
-    f <- readFile input
+    f <- C.readFile input
     result <- parse optable input f
     return result
     where parse st src input = case runPrologParser (buildTable >> many1 sentence') st src input of

@@ -11,7 +11,7 @@ cabal-version:       >=1.10
 
 executable camp
   main-is:             Main.hs
-  build-depends:       base, parsec, bytestring, containers, mtl, multiset >= 0.2 && < 0.3, ansi-wl-pprint, array, union-find-array, diagrams-svg, diagrams-lib, diagrams-contrib, SVGFonts, MissingH, rosezipper, monad-extras, monad-supply, lens
+  build-depends:       base, parsec, bytestring, containers, mtl, multiset >= 0.2 && < 0.3, ansi-wl-pprint, array, union-find-array, diagrams-svg, diagrams-lib, diagrams-contrib, SVGFonts, MissingH, rosezipper, monad-extras, monad-supply, lens, file-embed
   hs-source-dirs:      src, lib/parsec-prolog/src, lib/term-rewriting/src
   default-language:    Haskell2010
   ghc-options:         -fno-cse -fno-full-laziness
