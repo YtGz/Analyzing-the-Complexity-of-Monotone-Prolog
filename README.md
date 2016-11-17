@@ -10,7 +10,7 @@ A semi-automatic, symbolic evaluation graph based complexity analyzer for monoto
 $ git clone https://github.com/YtGz/Analyzing-the-Complexity-of-Monotone-Prolog.git
 $ cd Analyzing-the-Complexity-of-Monotone-Prolog/
 $ cabal update
-$ cabal install parsec bytestring containers mtl multiset-0.2.2 ansi-wl-pprint array union-find-array diagrams-svg diagrams-lib diagrams-contrib SVGFonts MissingH rosezipper monad-extras monad-supply lens
+$ cabal install parsec bytestring containers mtl multiset-0.2.2 ansi-wl-pprint array union-find-array diagrams-svg diagrams-lib diagrams-contrib SVGFonts MissingH rosezipper monad-extras monad-supply lens template-haskell file-embed
 $ cabal configure
 $ cabal build
 $ ./camp -i example.pl -g example.svg -o example.trs
