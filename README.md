@@ -13,7 +13,7 @@ $ cabal update
 $ cabal install parsec bytestring containers mtl multiset-0.2.2 ansi-wl-pprint array union-find-array diagrams-svg diagrams-lib diagrams-contrib SVGFonts MissingH rosezipper monad-extras monad-supply lens template-haskell file-embed
 $ cabal configure
 $ cabal build
-$ ./camp -i example.pl -g example.svg -o example.trs
+$ ./dist/build/camp/camp -i example.pl -g example.svg -o example.trs
 ```
 Requires [Cabal (version 1.10 or higher)](https://www.haskell.org/cabal/download.html) and a Haskell 2010 compatible compiler (e.g. [GHC](https://www.haskell.org/ghc/)).  
 See [supported platforms](https://ghc.haskell.org/trac/ghc/wiki/Platforms).
