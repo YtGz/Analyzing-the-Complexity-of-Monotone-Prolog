@@ -2,8 +2,16 @@
 
 A semi-automatic, symbolic evaluation graph based complexity analyzer for monotone Prolog programs. Generates term rewrite systems that can be analyzed with tools like [TcT](http://cl-informatik.uibk.ac.at/software/tct/).
 
+<br>
+
+## Gitpod
+
+Click the button below to start a new development environment:
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/YtGz/Analyzing-the-Complexity-of-Monotone-Prolog)
 
 <br>
+
 ## Installation
 
 ```bash
@@ -20,6 +28,7 @@ See [supported platforms](https://ghc.haskell.org/trac/ghc/wiki/Platforms).
 
 
 <br>
+
 ## Usage
 
 
