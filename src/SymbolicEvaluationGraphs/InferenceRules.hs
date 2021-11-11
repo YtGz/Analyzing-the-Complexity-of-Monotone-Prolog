@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wall    #-}
+{-# OPTIONS_GHC -Wall #-}
 module SymbolicEvaluationGraphs.InferenceRules where
 
 import Control.Arrow
@@ -45,10 +45,10 @@ eval
     :: Monad m
     => AbstractState
     -> Control.Monad.State.StateT (Int, Int) (Control.Monad.Supply.SupplyT Int (Control.Monad.State.StateT (Data.Map.Map (String, Int, [Int]) [Int]) (Control.Monad.State.StateT (Data.Map.Map Int Subst') m))) (AbstractState, AbstractState)
-eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
-    (h_:b'_,_) <- instantiateWithFreshAbstractVariables (h : maybeToList b)
-    b_ <- renameVariables b'_
-    ([t_],freshVarSub) <- instantiateWithFreshAbstractVariables [t]
+eval ((t:qs,sub,Just (h,b)):s,(g,u)) =
+    instantiateWithFreshAbstractVariables (h : maybeToList b) >>= \(h_:b'_,_) ->
+    renameVariables b'_ >>= \b_ ->
+    instantiateWithFreshAbstractVariables [t] >>= \([t_],freshVarSub) ->
     let g_ = map (apply (restrictSubstToG freshVarSub g)) g
         qs_ = map (apply freshVarSub) qs
         sub_ = compose freshVarSub sub
@@ -66,7 +66,7 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
                 u
         (Just mgu) = unify t_ h_
         mguG = restrictSubstToG mgu g_
-        mguGAndRenaming = restrictSubstToGForU mgu g_
+        mguGAndRenaming = restrictSubstToGForU mgu g_ in
     Control.Monad.State.lift
         (Control.Monad.State.lift
              (Control.Monad.State.lift
@@ -75,7 +75,7 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
                             (\p ->
                                   fromMap
                                       (toMap p `Data.Map.union`
-                                       toMap (applyToSubKeys mgu p)))))))
+                                       toMap (applyToSubKeys mgu p))))))) >>
     let s1 =
             ( ( map
                     (apply mgu)
@@ -92,7 +92,7 @@ eval ((t:qs,sub,Just (h,b)):s,(g,u)) = do
                     (concatMap
                          Data.Rewriting.Term.vars
                          (Data.Map.elems (toMap mguG)))
-              , map (apply mguGAndRenaming *** apply mguGAndRenaming) u_))
+              , map (apply mguGAndRenaming *** apply mguGAndRenaming) u_)) in
     return
         ( implicitGeneralization s1
         , implicitGeneralization (s, (g, u ++ [(t, h)])))
