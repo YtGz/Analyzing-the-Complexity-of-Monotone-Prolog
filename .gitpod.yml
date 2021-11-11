@@ -2,11 +2,11 @@ image:
   file: .gitpod.Dockerfile
 tasks:
   - init: |
+      (cd lib && git clone https://github.com/YtGz/monad-supply.git)
       cabal update
-      stack build
-
-    command: |
-      stack test
+      cabal install hpack
+      (cd lib/monad-supply && hpack)
+      cabal build
 
 vscode:
   extensions:
