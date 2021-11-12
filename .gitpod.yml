@@ -2,10 +2,12 @@ image:
   file: .gitpod.Dockerfile
 tasks:
   - init: |
+      # monad-supply is not cloned yet, so we need to ignore the cabal.project file initially
+      cabal update --ignore-project
       (cd lib && git clone https://github.com/YtGz/monad-supply.git)
-      cabal update
-      cabal install hpack
-      (cd lib/monad-supply && hpack)
+      # use hpack to generate monad-supply.cabal
+      (cd lib/monad-supply && cabal install --ignore-project hpack && hpack)
+      # build camp
       cabal build
 
 vscode:
