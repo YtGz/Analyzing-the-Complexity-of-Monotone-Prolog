@@ -23,6 +23,8 @@ $ cabal update --ignore-project
 $ (cd lib && git clone https://github.com/YtGz/monad-supply.git)
 # use hpack to generate monad-supply.cabal
 $ (cd lib/monad-supply && cabal install --ignore-project hpack && hpack)
+# fetch parsec-prolog library
+$ (cd lib && git clone https://github.com/acharal/parsec-prolog.git)
 # build camp
 $ cabal build
 

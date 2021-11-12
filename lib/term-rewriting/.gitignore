@@ -1,7 +1,0 @@
-*~
-/dist/
-*.swp
-.dist-scion
-.cabal-sandbox/
-cabal.config
-cabal.sandbox.config
