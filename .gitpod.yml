@@ -9,6 +9,8 @@ tasks:
       (cd lib/monad-supply && cabal install --ignore-project hpack && hpack)
       # fetch parsec-prolog library
       (cd lib && git clone https://github.com/acharal/parsec-prolog.git)
+      # path of op.pl file is hardcoded in the parsec-prolog library
+      sudo mkdir -p /home/angel/edu/phd/code/parsec-prolog/pl && sudo cp lib/parsec-prolog/pl/op.pl /home/angel/edu/phd/code/parsec-prolog/pl/op.pl
       # build camp
       cabal build
 
