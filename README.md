@@ -17,13 +17,18 @@ Click the button below to start a new development environment:
 ```bash
 $ git clone https://github.com/YtGz/Analyzing-the-Complexity-of-Monotone-Prolog.git
 $ cd Analyzing-the-Complexity-of-Monotone-Prolog/
-$ cabal update
-$ cabal install parsec bytestring containers mtl multiset-0.2.2 ansi-wl-pprint array union-find-array diagrams-svg diagrams-lib diagrams-contrib SVGFonts MissingH rosezipper monad-extras monad-supply lens template-haskell file-embed
-$ cabal configure
+$ mkdir lib
+# monad-supply is not cloned yet, so we need to ignore the cabal.project file initially
+$ cabal update --ignore-project
+$ (cd lib && git clone https://github.com/YtGz/monad-supply.git)
+# use hpack to generate monad-supply.cabal
+$ (cd lib/monad-supply && cabal install --ignore-project hpack && hpack)
+# build camp
 $ cabal build
-$ ./dist/build/camp/camp -i example.pl -g example.svg -o example.trs
+
+$ cabal exec camp -- -i foo.pl -g bar.svg -o baz.trs
 ```
-Requires [Cabal (version 1.10 or higher)](https://www.haskell.org/cabal/download.html) and a Haskell 2010 compatible compiler (e.g. [GHC](https://www.haskell.org/ghc/)).  
+Requires [Cabal (version 3 or higher)](https://www.haskell.org/cabal/download.html) and a Haskell 2010 compatible compiler (e.g. [GHC](https://www.haskell.org/ghc/)).  
 See [supported platforms](https://ghc.haskell.org/trac/ghc/wiki/Platforms).
 
 
